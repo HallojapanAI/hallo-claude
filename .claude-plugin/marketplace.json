@@ -1,0 +1,13 @@
+{
+  "name": "hallo",
+  "description": "Bộ Claude Code plugin nội bộ của HalloJapan Group — quy trình Git/GitHub, review, bảo mật, onboarding, tri thức hệ thống",
+  "owner": { "name": "HalloJapan Group Platform Team" },
+  "metadata": { "pluginRoot": "./plugins" },
+  "plugins": [
+    { "name": "git", "source": "./plugins/git", "category": "workflow", "tags": ["git", "github"], "description": "Git/GitHub chuẩn HalloJapan: /git:new, /git:ship, /git:pr, /git:sync + guard chặn push nhầm" },
+    { "name": "review", "source": "./plugins/review", "category": "quality", "tags": ["review"], "description": "Review theo quy tắc R-xxx: /review:diff, /review:pr, /review:fix" },
+    { "name": "sec", "source": "./plugins/sec", "category": "security", "tags": ["security"], "description": "Bảo mật: /sec:scan, /sec:secrets" },
+    { "name": "setup", "source": "./plugins/setup", "category": "onboarding", "tags": ["setup"], "description": "Onboarding: /setup:doctor, /setup:init, /setup:repo" },
+    { "name": "kb", "source": "./plugins/kb", "category": "knowledge", "tags": ["docs"], "description": "Tri thức hệ thống: /kb:find, /kb:sync + tự nạp ngữ cảnh nghiệp vụ" }
+  ]
+}

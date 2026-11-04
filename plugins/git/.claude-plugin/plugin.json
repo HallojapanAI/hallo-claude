@@ -1,0 +1,11 @@
+{
+  "name": "git",
+  "displayName": "Hallo Git",
+  "version": "2.0.0",
+  "description": "Git/GitHub chuẩn HalloJapan: nhánh từ dev, Conventional Commits, PR vào dev, ship 1 lệnh, guard chặn push nhầm",
+  "author": { "name": "HalloJapan Group Platform Team" },
+  "repository": "https://github.com/HallojapanAI/hallo-claude",
+  "license": "UNLICENSED",
+  "keywords": ["git", "github", "pr", "conventional-commits"],
+  "metadata": { "shared": ["hallo-ctx.mjs"] }
+}
