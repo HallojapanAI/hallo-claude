@@ -59,9 +59,14 @@ export function chunk(text, limit = LIMIT) {
   return out;
 }
 
+// Thư mục chứa các repo. Worktree (vd ~/tmp/hallo_worktrees/hallo-api-feat-2) tính theo repo gốc
+// của nó (git common dir), nên vẫn thấy các repo cạnh repo gốc.
 function workspace() {
+  if (process.env.HALLO_WORKSPACE) return process.env.HALLO_WORKSPACE;
+  const common = sh('git', ['rev-parse', '--path-format=absolute', '--git-common-dir']);
+  if (common) return dirname(dirname(common));
   const root = sh('git', ['rev-parse', '--show-toplevel']);
-  return process.env.HALLO_WORKSPACE || (root ? dirname(root) : process.cwd());
+  return root ? dirname(root) : process.cwd();
 }
 
 function repos(list) {

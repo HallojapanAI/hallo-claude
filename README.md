@@ -77,6 +77,9 @@ hallojapangroup/
   hallo-api/  hallo-web/  hallo-system-knowledge/  hallo-claude/
 ```
 
+Worktree có thể nằm ngoài workspace (khuyến nghị `~/tmp/hallo_worktrees/<repo>-<nhánh>` cho thư mục gọn): plugin dò
+các repo cạnh **repo gốc** của worktree nên vẫn tìm được hallo-system-knowledge.
+
 ## Cấu trúc repo này
 
 ```
