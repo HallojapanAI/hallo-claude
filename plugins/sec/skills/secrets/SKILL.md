@@ -16,6 +16,9 @@ Phạm vi: `$ARGUMENTS` — `--staged` (mặc định nếu có file staged) ho�
 
 ## Làm
 
+0. Repo có `scripts/secret-scan.mjs` (baseline `/sec:harden`) → dùng nó: `node scripts/secret-scan.mjs --staged` hoặc `--range origin/dev..HEAD`
+   (cùng rule `.gitleaks.toml` với hook và CI). Chưa có → `node "${CLAUDE_PLUGIN_ROOT}/scripts/security/secret-scan.mjs" …` chạy trong repo, rồi gợi ý `/sec:harden`.
+   Các bước dưới chỉ là dự phòng khi không chạy được script.
 1. Có gitleaks → `gitleaks git --staged --redact --no-banner` (staged) hoặc `gitleaks git --log-opts="origin/dev..HEAD" --redact --no-banner` (branch).
 2. Không có → `git diff --cached -U0` / `git diff origin/dev...HEAD -U0`, chỉ xét dòng `+`, tìm:
    - file `.env`, `*.pem`, `*.key`, `id_rsa*`, `*.p12`, dump `.sql`

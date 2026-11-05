@@ -1,0 +1,11 @@
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Chỉ dependency chạy production; mức high trở lên chặn PR (RV-014).
+      - run: npm audit --omit=dev --audit-level=high

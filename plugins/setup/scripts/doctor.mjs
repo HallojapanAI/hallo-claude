@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { plan as securityPlan } from './security/harden.mjs';
 
 const ORG = 'HallojapanAI';
 const REPOS = ['hallo-api', 'hallo-web', 'hallo-system-knowledge', 'hallo-claude'];
@@ -26,7 +27,9 @@ const readJson = (p) => {
 };
 
 // Workspace: HALLO_WORKSPACE, hoặc thư mục cha của git root, hoặc cwd.
-const gitRoot = run('git', ['rev-parse', '--show-toplevel']).out;
+// Worktree ngoài workspace → tính theo repo gốc (git common dir).
+const commonDir = run('git', ['rev-parse', '--path-format=absolute', '--git-common-dir']).out;
+const gitRoot = commonDir ? dirname(commonDir) : run('git', ['rev-parse', '--show-toplevel']).out;
 const candidates = [process.env.HALLO_WORKSPACE, gitRoot && dirname(gitRoot), process.cwd()].filter(Boolean).map((p) => resolve(p));
 const ws = candidates.find((p) => REPOS.some((r) => existsSync(join(p, r, '.git')))) ?? candidates.at(-1);
 
@@ -48,7 +51,7 @@ else {
   const auth = run('gh', ['auth', 'status']);
   add('tools', 'gh auth', auth.ok ? 'ok' : 'fail', auth.ok ? (auth.out.match(/account (\S+)/) ?? [])[1] ?? 'đã đăng nhập' : 'chưa đăng nhập', 'gh auth login -h github.com -p ssh');
 }
-add('tools', 'gitleaks', run('gitleaks', ['version']).ok ? 'ok' : 'warn', run('gitleaks', ['version']).ok ? 'có' : 'không có — /sec:secrets dùng grep', 'brew install gitleaks');
+add('tools', 'gitleaks', run('gitleaks', ['version']).ok ? 'ok' : 'warn', run('gitleaks', ['version']).ok ? 'có' : 'không có — hook dùng rule dự phòng, thiếu rule mặc định của gitleaks', 'brew install gitleaks');
 add('tools', 'jq', run('jq', ['--version']).ok ? 'ok' : 'warn', run('jq', ['--version']).out || 'không có', 'brew install jq');
 
 // Git identity + SSH
@@ -79,6 +82,21 @@ for (const r of REPOS) {
     if (r === 'hallo-api' && !existsSync(join(dir, '.env'))) (status = 'warn'), detail.push('chưa có .env');
   }
   add('repos', r, status, detail.join(' · '), status === 'ok' ? '' : `cd ${dir} && npm ci${r === 'hallo-api' ? ' && cp -n .env.example .env' : ''}`);
+}
+
+// Bảo mật: baseline /sec:harden + hook pre-commit đã bật trên máy này
+for (const r of REPOS) {
+  const dir = join(ws, r);
+  if (!existsSync(join(dir, '.git'))) continue;
+  try {
+    const sec = securityPlan(dir);
+    const drift = sec.changes.map((c) => c.path);
+    const status = drift.length ? 'fail' : sec.hookEnabled ? 'ok' : 'warn';
+    const detail = drift.length ? `lệch: ${drift.join(', ')}` : sec.hookEnabled ? 'baseline khớp, hook bật' : 'baseline khớp, hook CHƯA bật trên máy này';
+    add('security', r, status, detail, drift.length ? `cd ${dir} && /sec:harden` : `cd ${dir} && git config core.hooksPath scripts/git-hooks`);
+  } catch {
+    add('security', r, 'warn', 'không kiểm được', `cd ${dir} && /sec:harden --check`);
+  }
 }
 
 // Claude plugins
