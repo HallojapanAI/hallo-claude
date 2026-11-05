@@ -11,13 +11,16 @@
 //   node task.mjs tasks [mainIssue] [--all]   task trong mọi repo của workspace (chạy được từ bất kỳ repo/worktree nào)
 //   node task.mjs use <mainIssue>             đổi task hiện tại của repo này
 //   node task.mjs forget <mainIssue>          xóa hẳn một task khỏi repo này
+//   node task.mjs verify <repo-dir> [args…]   chạy `npm run local -- verify [args]` ở repo đó; log đầy đủ ra file,
+//                                             chỉ in dòng tóm tắt (+ 40 dòng cuối khi FAIL) → ít token. Repo chưa có
+//                                             script `local` → in "verify: SKIP". Luôn thoát 0.
 //   node task.mjs linkify <in.md> <out.md>    `hallo-xxx/path[:L[-M]]` → permalink GitHub (commit của <remote>/dev, không có thì main);
 //                                             file chưa có trên remote (file sẽ tạo mới) giữ nguyên
 //
 // Trạng thái lưu trong <git common dir>/hallo-tasks.json (chung cho bản clone và mọi worktree của repo,
 // không bao giờ bị commit), dạng { current, tasks: { "<mainIssue>": {...} } } — một repo có nhiều task.
 // File cũ hallo-task.json (một task/repo) được tự chuyển sang khi đọc.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -127,6 +130,35 @@ function remoteResolver() {
 }
 
 
+// Gọi bộ kiểm "sau mỗi task" của repo (hallo-api/scripts/local.mjs) và rút gọn kết quả.
+export function summarizeVerify(output, status) {
+  const lines = output.trimEnd().split('\n');
+  const summary = [...lines].reverse().find((l) => /^verify: (PASS|FAIL)/.test(l.trim()));
+  const ok = status === 0 && summary?.includes('PASS');
+  const head = !summary
+    ? `verify: FAIL (thoát ${status}, không có dòng tóm tắt)`
+    : ok || !summary.includes('PASS')
+      ? summary.trim()
+      : `verify: FAIL (thoát ${status} dù tóm tắt ghi "${summary.trim()}")`;
+  return ok ? head : [head, ...lines.slice(-40)].join('\n');
+}
+
+function verify(dir, args) {
+  const pkg = readJson(join(dir, 'package.json'));
+  if (!pkg?.scripts?.local) return 'verify: SKIP (repo chưa có `npm run local`)';
+  const logDir = join(homedir(), '.hallo-local', 'logs');
+  mkdirSync(logDir, { recursive: true });
+  const log = join(logDir, `task-verify-${Date.now()}.log`);
+  const r = spawnSync('npm', ['run', '--silent', 'local', '--', 'verify', ...args], {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  const output = `${r.stdout ?? ''}${r.stderr ?? ''}`;
+  writeFileSync(log, output);
+  return `${summarizeVerify(output, r.status)}\n(log: ${log})`;
+}
+
 const STORE = 'hallo-tasks.json';
 const LEGACY = 'hallo-task.json';
 
@@ -213,6 +245,7 @@ try {
     writeFileSync(resolve(b), text);
     console.log(`linked ${stats.linked}; chưa có trên remote (file mới?): ${stats.local.length ? stats.local.join(', ') : 'không'}`);
   } else if (cmd === 'repos') console.log(JSON.stringify(repos(a), null, 2));
+  else if (cmd === 'verify') console.log(verify(resolve(a ?? '.'), process.argv.slice(4)));
   else if (cmd === 'state') {
     const at = storeAt();
     const key = a && !a.startsWith('--') ? a : at?.store.current;
@@ -244,7 +277,7 @@ try {
     }
   } else
     console.log(
-      'Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state [mainIssue] | save <json> | list [--all] | tasks [mainIssue] [--all] | use <mainIssue> | forget <mainIssue>',
+      'Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state [mainIssue] | save <json> | list [--all] | tasks [mainIssue] [--all] | use <mainIssue> | forget <mainIssue> | verify <repo-dir> [args]',
     );
 } catch (e) {
   console.log(`task.mjs: ${e.message}`);

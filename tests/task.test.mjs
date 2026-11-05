@@ -91,3 +91,21 @@ test('nhiều task mỗi repo: save theo mainIssue, task hiện tại, chuyển 
   t('forget', 'O/r#1');
   assert.equal(JSON.parse(t('list', '--all')).tasks.length, 1);
 });
+
+test('verify: chỉ trả dòng tóm tắt khi PASS, kèm log cuối khi FAIL', async () => {
+  const { summarizeVerify } = await import('../plugins/task/scripts/task.mjs');
+  const noisy = Array.from({ length: 200 }, (_, i) => `[api] dòng log ${i}`).join('\n');
+  assert.equal(summarizeVerify(`${noisy}\nverify: PASS 6/6 (4m12s)\n`, 0), 'verify: PASS 6/6 (4m12s)');
+  const failed = summarizeVerify(`${noisy}\n✗ web:check\nverify: FAIL web:check\n`, 1);
+  assert.match(failed, /^verify: FAIL web:check\n/);
+  assert.ok(failed.split('\n').length <= 41, 'tối đa 40 dòng log');
+  assert.match(summarizeVerify('crash không có tóm tắt', 1), /^verify: FAIL \(thoát 1, không có dòng tóm tắt\)/);
+  // Thoát ≠ 0 dù in PASS → coi là FAIL.
+  assert.match(summarizeVerify('verify: PASS 6/6', 2), /^verify: FAIL \(thoát 2 dù tóm tắt ghi "verify: PASS 6\/6"\)/);
+});
+
+test('verify: repo chưa có npm run local → SKIP', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'nolocal-'));
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'x', scripts: { test: 'x' } }));
+  assert.match(run('verify', dir), /^verify: SKIP/);
+});

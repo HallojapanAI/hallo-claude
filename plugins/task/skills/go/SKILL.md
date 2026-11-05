@@ -37,8 +37,11 @@ Task đang mở trong workspace: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs"
 5. **Branch**: ở mỗi repo **đã duyệt**, `git switch <branch>` từ trạng thái task (chưa có branch → tạo như `/task:open` bước 10).
    `git fetch origin` và rebase lên `origin/dev` nếu bị behind.
 6. **Trạng thái**: trong mỗi repo đã duyệt `task.mjs save '{"mainIssue":"<chính>","status":"IN_PROGRESS"}'` (luôn kèm `mainIssue`: một repo có thể có nhiều task); comment 1 dòng lên issue của repo đó: `▶ Bắt đầu triển khai theo Plan vN`.
-7. **Code**: làm theo plan, đúng thứ tự mục "Chia PR". Mỗi PR: code → test theo mục Verification → `/review:diff` → `/git:ship`
+7. **Code**: làm theo plan, đúng thứ tự mục "Chia PR". Mỗi PR: code → test theo mục Verification → **verify** → `/review:diff` → `/git:ship`
    (PR body có `Closes #<issue của repo đó>`). Đi lệch plan → ghi lại và báo trên issue, không âm thầm đổi phạm vi.
+   - **verify** (một lệnh, không cần AI đọc log): `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" verify <thư mục repo/worktree> --only <api|web>`.
+     Chỉ đọc kết quả lệnh này: `verify: PASS …` → tiếp; `verify: FAIL <bước>` → sửa theo 40 dòng log đi kèm, chạy lại;
+     **không** mở file log đầy đủ trừ khi 40 dòng không đủ. `verify: SKIP` (repo chưa có `npm run local`) → chạy lệnh check của repo như cũ.
 
 ## Kết quả
 

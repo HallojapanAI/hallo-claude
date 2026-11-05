@@ -1,7 +1,7 @@
 ---
 name: done
 description: Khép một task sau khi PR đã merge — kiểm PR từng repo, đóng issue mà GitHub không tự đóng (PR vào dev trong khi nhánh mặc định là main), đóng issue chính kèm tóm tắt, dọn worktree/nhánh đã merge, đánh dấu task DONE.
-argument-hint: "[#n | owner/repo#n] [--force] [--keep-branches]"
+argument-hint: "[#n | owner/repo#n] [--force] [--keep-branches] [--skip-verify]"
 disable-model-invocation: true
 allowed-tools:
   - Bash(gh issue *)
@@ -14,6 +14,7 @@ allowed-tools:
   - Bash(git branch -d *)
   - Bash(git fetch *)
   - Bash(node *)
+  - Bash(npm run *)
 ---
 
 # /task:done — khép task
@@ -36,6 +37,10 @@ Task đang mở trong workspace: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs"
      | đã merge | đã đóng | không làm gì |
      | không có PR | đã đóng (not planned) | coi là xong |
      | chưa merge / đang mở | — | **dừng ở repo này**, báo; chỉ đóng khi có `--force` (comment lý do) |
+2b. **Kiểm cuối trên dev** (bỏ qua nếu `--skip-verify`), một lần cho cả task, ở hallo-api (nơi có `npm run local`):
+   `git -C <hallo-api> fetch -q origin` → `git -C <hallo-api> worktree add --detach ~/tmp/hallo_worktrees/hallo-api-verify origin/dev`
+   → `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" verify ~/tmp/hallo_worktrees/hallo-api-verify` → `git -C <hallo-api> worktree remove --force ~/tmp/hallo_worktrees/hallo-api-verify`
+   (worktree tạm do lệnh này tạo, không có thay đổi của ai). Chỉ đọc dòng tóm tắt. `FAIL` → báo bước lỗi + link log, **không** đánh dấu DONE (trừ `--force`). `SKIP` → ghi "chưa có verify".
 3. **Issue chính**: mọi repo đã xong → nếu còn mở, comment tóm tắt (PR từng repo, việc tay còn lại nếu plan có ghi) rồi đóng. Còn repo chưa xong → không đóng, liệt kê.
 4. **Dọn** (bỏ qua nếu `--keep-branches`), chỉ với repo đã merge, **hỏi một lần** cho cả danh sách:
    - Worktree của task (trường `worktree`, hoặc `git -C <path> worktree list` có `<branch>`): `git worktree remove <dir>` — từ chối nếu worktree còn thay đổi chưa commit (báo, không `--force`).
