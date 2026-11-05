@@ -29,6 +29,8 @@ Quy ước: [conventions.md](${CLAUDE_PLUGIN_ROOT}/skills/flow/references/conven
 3. **Việc kèm theo**: mục `việc kèm theo` ở trên chưa làm (OpenAPI R-013, migration, i18n) → báo và hỏi làm luôn hay ghi vào PR là việc còn lại.
 4. **Cập nhật base**: `git fetch origin`; behind `origin/dev` > 0 → `git rebase origin/dev` (xung đột → dừng, hướng dẫn như `/git:sync`).
 5. **Check** (trừ `--no-check`): chạy lệnh ở dòng `check:`. Fail → tóm tắt lỗi (file:dòng), đề xuất sửa; không push.
+   **Secret** (luôn chạy, kể cả `--no-check`): repo có `scripts/secret-scan.mjs` → `node scripts/secret-scan.mjs --range origin/dev..HEAD`.
+   Có phát hiện → **không push**; secret thật đã commit → bỏ khỏi commit (sửa + `git commit --amend`/rebase trên nhánh riêng) và nhắc xoay nếu đã từng push.
 6. **Push**: `git push -u origin HEAD` (đã rebase nhánh đã push → `git push --force-with-lease`).
 7. **PR**:
    - `gh pr view --json number,url,state,isDraft` để biết đã có PR chưa.
@@ -38,11 +40,17 @@ Quy ước: [conventions.md](${CLAUDE_PLUGIN_ROOT}/skills/flow/references/conven
    - Đã có → push là đủ; chỉ `gh pr edit --body-file -` nếu phạm vi thay đổi đáng kể.
    - `gh` chưa cài/chưa đăng nhập → in URL so sánh `https://github.com/<slug>/compare/dev...<branch>?expand=1` + body để dán, và nhắc `/setup:doctor`.
 
+8. **Security gate**: `node "${CLAUDE_PLUGIN_ROOT}/scripts/security/merge-gate.mjs" <số PR>` (đợi tối đa ~2 phút nếu `PENDING`, `gh pr checks <n> --watch --interval 10`).
+   - `PASS` → ghi `security: pass` trong kết quả.
+   - `FAIL` / `MISSING` → **⛔ không được merge**: mở log job lỗi (`gh run view --log-failed`), tóm tắt nguyên nhân (không in giá trị secret), đề xuất sửa.
+     Guard của plugin `git` cũng chặn `gh pr merge` khi Security không xanh — không tìm cách lách (merge trên web, `--admin`).
+   - `UNKNOWN` → báo không kiểm được, nhắc kiểm trên GitHub trước khi merge.
+
 ## Kết quả (≤ 6 dòng)
 
 ```
 ✓ ship feat/HJ-022-qr-revoke → PR #45 (ready)  <url>
-  commits: 2 · check: pass · base: dev (up to date)
+  commits: 2 · check: pass · secret: sạch · security: pass · base: dev (up to date)
   liên quan: Refs HJ-022
   tiếp: chờ status pr-review + 1 approve → squash merge
 ```

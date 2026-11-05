@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { addedLines, parseRules, scanLines } from '../shared/security/secret-scan.mjs';
 import { withIgnoreBlock } from '../shared/security/harden.mjs';
+import { evaluate } from '../shared/security/merge-gate.mjs';
 
 const SEC = new URL('../shared/security/', import.meta.url).pathname;
 const config = parseRules(readFileSync(join(SEC, 'gitleaks.toml'), 'utf8'));
@@ -148,4 +149,14 @@ test('áp lại baseline: cập nhật file cũ của baseline, không động v
   assert.equal(readFileSync(join(dir, '.github/dependabot.yml'), 'utf8'), 'version: 2\nupdates: []\n');
   // Áp lần nữa: không còn gì đổi ngoài xung đột đã báo.
   assert.doesNotMatch(harden('apply'), /→/);
+});
+
+test('merge-gate: chỉ PASS khi mọi check Security xanh', () => {
+  const c = (name, bucket, workflow = 'Security') => ({ name, bucket, workflow });
+  assert.equal(evaluate([c('secret-scan', 'pass'), c('npm-audit', 'pass'), c('lint', 'fail', 'CI')]).status, 'PASS');
+  assert.equal(evaluate([c('secret-scan', 'fail')]).status, 'FAIL');
+  assert.equal(evaluate([c('secret-scan', 'cancel')]).status, 'FAIL');
+  assert.equal(evaluate([c('secret-scan', 'pass'), c('npm-audit', 'pending')]).status, 'PENDING');
+  assert.equal(evaluate([c('lint', 'pass', 'CI')]).status, 'MISSING');
+  assert.equal(evaluate([], false).status, 'PASS');
 });

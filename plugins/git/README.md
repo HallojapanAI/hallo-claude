@@ -13,7 +13,7 @@
 
 **Tự động** (không cần gõ):
 - Skill `flow` nạp quy ước khi bạn nói "commit/push/mở PR…" bằng lời thường.
-- Hook guard trên mọi lệnh Bash: **chặn** push vào `dev`/`main`/`master`, force push (cho phép `--force-with-lease` trên nhánh riêng), `--no-verify`, `git add .env`, `gh pr merge --admin`; **hỏi lại** trước `reset --hard`, `clean -f`, `checkout .`, `branch -D`.
+- Hook guard trên mọi lệnh Bash: **chặn** push vào `dev`/`main`/`master`, force push (cho phép `--force-with-lease` trên nhánh riêng), `--no-verify`, `git add .env`, `gh pr merge --admin`, **`gh pr merge` khi check `Security` (secret-scan, npm-audit) đỏ / đang chạy / chưa chạy**; **hỏi lại** trước `reset --hard`, `clean -f`, `checkout .`, `branch -D`.
   Tắt tạm: chạy `HALLO_GUARD=off claude`.
 
 Quy ước đầy đủ: [skills/flow/references/conventions.md](skills/flow/references/conventions.md).
