@@ -34,3 +34,19 @@ test('chunks: plan lớn chia theo heading, mỗi phần ≤ 60.000 ký tự và
 test('lệnh lạ không exit ≠ 0', () => {
   assert.match(run('nope'), /Dùng:/);
 });
+
+test('linkify: tham chiếu repo có trên remote → permalink, file mới giữ nguyên', async () => {
+  const { linkify } = await import('../plugins/task/scripts/task.mjs');
+  const resolver = (repo, path) =>
+    path.startsWith('src/new') ? null : { slug: `Org/${repo}`, sha: 'abc123', kind: path.endsWith('/') ? 'tree' : 'blob' };
+  const { text, stats } = linkify(
+    'Xem `hallo-api/src/a.ts:12-20`, `hallo-web/src/b.tsx` và tạo `hallo-api/src/new/x.ts`; `src/c.ts` không đổi.',
+    resolver,
+  );
+  assert.match(text, /\[`hallo-api\/src\/a\.ts:12-20`\]\(https:\/\/github\.com\/Org\/hallo-api\/blob\/abc123\/src\/a\.ts#L12-L20\)/);
+  assert.match(text, /\[`hallo-web\/src\/b\.tsx`\]\(https:\/\/github\.com\/Org\/hallo-web\/blob\/abc123\/src\/b\.tsx\)/);
+  assert.match(text, /`hallo-api\/src\/new\/x\.ts`;/);
+  assert.match(text, / `src\/c\.ts` không đổi/);
+  assert.equal(stats.linked, 2);
+  assert.deepEqual(stats.local, ['hallo-api/src/new/x.ts']);
+});

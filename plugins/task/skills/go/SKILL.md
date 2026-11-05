@@ -29,7 +29,7 @@ Trạng thái task của repo này: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.m
    Plan hiện hành = comment cuối có `<!-- hallo-plan vN -->` (gộp các phần nếu bị chia). Góp ý = mọi comment **sau** nó (bỏ comment của bot).
 4. **Áp góp ý**: tóm tắt từng góp ý thành 1 dòng. Có góp ý làm đổi plan → sửa file plan và đăng bản mới như `/task:plan-update` (v N+1),
    rồi báo người dùng các thay đổi. Góp ý mâu thuẫn/mơ hồ → hỏi trước khi code.
-5. **Branch**: ở mỗi repo trong plan, `git switch <branch>` từ trạng thái task (chưa có branch → tạo như `/task:open` bước 9).
+5. **Branch**: ở mỗi repo trong plan, `git switch <branch>` từ trạng thái task (chưa có branch → tạo như `/task:open` bước 10).
    `git fetch origin` và rebase lên `origin/dev` nếu bị behind.
 6. **Trạng thái**: `task.mjs save '{"status":"IN_PROGRESS"}'`; comment lên issue chính: `▶ Bắt đầu triển khai theo Plan vN` (1 dòng).
 7. **Code**: làm theo plan, đúng thứ tự mục "Chia PR". Mỗi PR: code → test theo mục Verification → `/review:diff` → `/git:ship`

@@ -18,6 +18,10 @@ mọi quyết định có dấu vết trên GitHub, và quy trình đủ đều 
 - Thiết kế theo repo, file chính sẽ sửa, hàm/component dùng lại.
 - **Chia PR**: mỗi PR tự build và deploy được → thành checklist trên issue.
 - **Verification**: lệnh test, ca kiểm thử, cách thử tay.
+- **Tham chiếu = link remote**: file/thư mục đã có trên GitHub ghi dạng `` `hallo-api/src/modules/products/items.service.ts:241` ``
+  (luôn có tên repo, kèm dòng nếu cần) — `/task:open` đổi thành permalink theo commit `origin/dev`, người review bấm là tới đúng code.
+  File sẽ tạo mới cũng ghi kèm tên repo (giữ dạng code). Không dùng đường dẫn tuyệt đối trên máy (`/Users/...`) hay đường dẫn
+  thiếu tên repo khi file đã có remote; file chỉ có ở máy (ảnh demo, file tải về) → chỉ ghi tên file.
 
 ## Issue & branch
 

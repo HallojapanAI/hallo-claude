@@ -35,14 +35,19 @@ Quy trình đầy đủ: [workflow.md](references/workflow.md) · Quy ước nh�
 6. **Issue chính**: `gh issue create -R <slug> --title "<type>: <tóm tắt tiếng Việt ≤ 70 ký tự>" --label plan,type:<type> --body-file <tmp>`.
    Body theo [issue-body.md](references/issue-body.md): Context 3–6 dòng rút từ plan, phạm vi repo, checklist PR (mục "Chia PR" trong plan), `Refs HJ-xxx` nếu có.
 7. **Issue phụ** (các repo còn lại): body ngắn — phần plan của repo đó (tiêu đề mục) + `Thuộc <slug-chính>#<n>`. Sau đó `gh issue edit` issue chính, thêm mục "Issue liên quan" liệt kê `<slug>#<m>`.
-8. **Đăng plan**: `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" chunks <plan> <tmpdir>` → mỗi file:
+8. **Link remote**: tham chiếu trong plan phải là link GitHub, không phải đường dẫn local.
+   - Đổi mọi đường dẫn local có remote (`/Users/…/hallo-api/src/x.ts`, `src/x.ts` trong mục của repo đó) thành dạng `` `<repo>/<path>[:dòng]` `` trong file plan.
+   - `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" linkify <plan> <tmp>/plan-linked.md` → permalink theo commit `origin/dev`.
+     Danh sách "chưa có trên remote" chỉ được là file **sẽ tạo mới**; còn lại là sai đường dẫn → sửa plan rồi chạy lại.
+   - File chỉ có ở máy (ảnh demo, file tải về…) → ghi tên file, không ghi đường dẫn tuyệt đối (R-008).
+9. **Đăng plan**: `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" chunks <tmp>/plan-linked.md <tmpdir>` → mỗi file:
    `gh issue comment <n> -R <slug-chính> --body-file <file>`. Comment đầu mở bằng dòng `<!-- hallo-plan v1 -->` + `## Plan v1` (thêm vào file trước khi gửi).
-9. **Branch** mỗi repo (`git -C <path>`): `<type>/<số issue của repo đó>-<slug>` (slug tiếng Anh kebab 2–5 từ, như `/git:new`).
+10. **Branch** mỗi repo (`git -C <path>`): `<type>/<số issue của repo đó>-<slug>` (slug tiếng Anh kebab 2–5 từ, như `/git:new`).
    Working tree bẩn → báo và hỏi, không tự stash. `git fetch origin --prune` → `git switch -c <branch> origin/<base>` → `git push -u origin <branch>`.
    Branch đã có → hỏi switch hay đổi tên. Không bao giờ push vào dev/main.
-10. **Lưu trạng thái** mỗi repo: chạy trong repo đó
+11. **Lưu trạng thái** mỗi repo: chạy trong repo đó
     `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" save '{"issue":<n>,"repo":"<slug>","mainIssue":"<slug-chính>#<n>","branch":"<branch>","plan":"<đường dẫn plan>","planVersion":1,"status":"PLAN_REVIEW"}'`.
-11. **Không code.** Dừng tại đây chờ review.
+12. **Không code.** Dừng tại đây chờ review.
 
 ## Kết quả (≤ 8 dòng)
 

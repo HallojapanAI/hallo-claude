@@ -6,6 +6,8 @@
 //   node task.mjs repos [api,web,...]         đường dẫn + slug GitHub của các repo trong workspace
 //   node task.mjs state                       trạng thái task của repo hiện tại (JSON, {} nếu chưa có)
 //   node task.mjs save '<json>'               gộp JSON vào trạng thái task của repo hiện tại
+//   node task.mjs linkify <in.md> <out.md>    `hallo-xxx/path[:L[-M]]` → permalink GitHub (commit của <remote>/dev, không có thì main);
+//                                             file chưa có trên remote (file sẽ tạo mới) giữ nguyên
 //
 // Trạng thái lưu trong <git-dir>/hallo-task.json → không bao giờ bị commit.
 import { execFileSync } from 'node:child_process';
@@ -67,11 +69,49 @@ function repos(list) {
   return names.map((name) => {
     const path = join(ws, name);
     const ok = existsSync(join(path, '.git'));
-    const remote = ok ? sh('git', ['remote', 'get-url', 'origin'], path) : '';
+    // Remote: ưu tiên `origin`, không có thì remote đầu tiên (vd hallo-claude đặt tên remote = tên repo).
+    const remotes = ok ? sh('git', ['remote'], path).split('\n').filter(Boolean) : [];
+    const remoteName = remotes.includes('origin') ? 'origin' : (remotes[0] ?? '');
+    const remote = remoteName ? sh('git', ['remote', 'get-url', remoteName], path) : '';
     const slug = (remote.match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/) ?? [])[1] ?? '';
-    const base = ok && sh('git', ['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/dev'], path) ? 'dev' : 'main';
-    return { name, path, exists: ok, slug, base };
+    const has = (b) => remoteName && sh('git', ['rev-parse', '--verify', '--quiet', `refs/remotes/${remoteName}/${b}`], path);
+    const base = has('dev') ? 'dev' : 'main';
+    return { name, path, exists: ok, slug, remote: remoteName, base };
   });
+}
+
+// Ghi chú tham chiếu trong plan bằng `<repo>/<path>[:dòng]` → link GitHub cố định theo commit,
+// để người review mở đúng phiên bản code mà plan dựa vào. In ra stderr số link đã đổi / chưa có trên remote.
+export function linkify(text, resolver) {
+  const stats = { linked: 0, local: [] };
+  const out = text.replace(/(?<!\[)`(hallo-[a-z-]+)\/([^`\s:]+?)(\/)?(?::(\d+)(?:-(\d+))?)?`(?!\])/g, (m, repo, path, slash, l1, l2) => {
+    const r = resolver(repo, path);
+    if (!r) {
+      stats.local.push(`${repo}/${path}`);
+      return m;
+    }
+    stats.linked++;
+    const anchor = l1 ? `#L${l1}${l2 ? `-L${l2}` : ''}` : '';
+    const label = `${repo}/${path}${slash ?? ''}${l1 ? `:${l1}${l2 ? `-${l2}` : ''}` : ''}`;
+    return `[\`${label}\`](https://github.com/${r.slug}/${r.kind}/${r.sha}/${path}${anchor})`;
+  });
+  return { text: out, stats };
+}
+
+function remoteResolver() {
+  const cache = new Map();
+  return (repo, path) => {
+    if (!cache.has(repo)) {
+      const [info] = repos(repo);
+      const sha = info.exists && info.remote ? sh('git', ['rev-parse', `${info.remote}/${info.base}`], info.path) : '';
+      cache.set(repo, info.slug && sha ? { ...info, sha } : null);
+    }
+    const info = cache.get(repo);
+    if (!info) return null;
+    const type = sh('git', ['cat-file', '-t', `${info.sha}:${path}`], info.path);
+    if (type !== 'blob' && type !== 'tree') return null;
+    return { slug: info.slug, sha: info.sha, kind: type === 'tree' ? 'tree' : 'blob' };
+  };
 }
 
 function stateFile() {
@@ -99,6 +139,10 @@ try {
       writeFileSync(f, head + p);
       console.log(f);
     });
+  } else if (cmd === 'linkify') {
+    const { text, stats } = linkify(readFileSync(resolve(a), 'utf8'), remoteResolver());
+    writeFileSync(resolve(b), text);
+    console.log(`linked ${stats.linked}; chưa có trên remote (file mới?): ${stats.local.length ? stats.local.join(', ') : 'không'}`);
   } else if (cmd === 'repos') console.log(JSON.stringify(repos(a), null, 2));
   else if (cmd === 'state') console.log(JSON.stringify(readState(), null, 2));
   else if (cmd === 'save') {
@@ -109,7 +153,7 @@ try {
       writeFileSync(f, JSON.stringify(next, null, 2) + '\n');
       console.log(JSON.stringify(next));
     }
-  } else console.log('Dùng: task.mjs latest-plan | chunks <plan> <outdir> | repos [api,web] | state | save <json>');
+  } else console.log('Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state | save <json>');
 } catch (e) {
   console.log(`task.mjs: ${e.message}`);
 }
