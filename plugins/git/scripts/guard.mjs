@@ -2,11 +2,12 @@
 // Guard PreToolUse(Bash) của plugin git — chặn thao tác git nguy hiểm trước khi chạy.
 //   deny: push vào dev/main/master, force push (trừ --force-with-lease trên nhánh riêng), --no-verify,
 //         git add file .env / khóa / chứng chỉ / dump DB, gh pr merge --admin, gh repo delete,
-//         gh repo edit --visibility public
+//         gh repo edit --visibility public, gh pr merge khi check Security đỏ / đang chạy / chưa chạy
 //   ask : reset --hard, clean -f, checkout/restore toàn bộ, branch -D
 // Tắt tạm: khởi động Claude với HALLO_GUARD=off. Lệnh gõ với tiền tố `!` không đi qua hook.
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { gate } from './security/merge-gate.mjs';
 
 const PROTECTED = new Set(['dev', 'main', 'master']);
 // File không bao giờ được commit (cùng ý với khối hallo-security trong .gitignore). Migration .sql là code → cho qua.
@@ -132,6 +133,19 @@ for (const raw of segments) {
   if (t[0] === 'gh') {
     if (t[1] === 'pr' && t[2] === 'merge' && t.includes('--admin'))
       findings.deny.push('gh pr merge --admin bỏ qua required check `pr-review`');
+    // Repo private gói Free không có required check → guard là lớp chặn merge khi Security không xanh.
+    if (t[1] === 'pr' && t[2] === 'merge') {
+      const rest = t.slice(3);
+      const at = rest.findIndex((a) => a === '-R' || a === '--repo');
+      const repo = at >= 0 ? rest[at + 1] : rest.find((a) => a.startsWith('--repo='))?.slice(7);
+      const target = rest.find((a, i) => !a.startsWith('-') && (at < 0 || i !== at + 1));
+      const result = gate(target, repo);
+      if (result.status === 'UNKNOWN') findings.ask.push(`không kiểm được check Security trước khi merge: ${result.reason}`);
+      else if (result.status !== 'PASS')
+        findings.deny.push(
+          `không merge: Security ${result.status} — ${result.reason}. Sửa rồi đợi check xanh (runbooks/security-secrets.md)`,
+        );
+    }
     if (t[1] === 'repo' && t[2] === 'delete') findings.deny.push('gh repo delete bị cấm');
     if (t[1] === 'repo' && t[2] === 'edit' && t.some((a, i) => (a === '--visibility' && t[i + 1] === 'public') || a === '--visibility=public'))
       findings.deny.push('không đổi repo sang public bằng Claude — lead quyết định trên GitHub (runbooks/security-secrets.md)');

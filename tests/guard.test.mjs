@@ -1,6 +1,6 @@
 // Test hook guard của plugin git: node --test tests/
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -14,6 +14,25 @@ const repo = (branch) => {
   g('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init');
   return dir;
 };
+// `gh` giả cho các ca `gh pr merge`: STUB_CHECKS = JSON check của PR, STUB_WF=1 nếu repo có workflow Security.
+const stubDir = mkdtempSync(join(tmpdir(), 'ghstub-'));
+writeFileSync(
+  join(stubDir, 'gh'),
+  `#!/bin/sh
+case "$1 $2" in
+  "pr view") echo '{"number":7,"headRefOid":"abc","url":"https://github.com/o/r/pull/7"}' ;;
+  "pr checks") echo "$STUB_CHECKS"; echo "$STUB_CHECKS" | grep -q '"pass"' && ! echo "$STUB_CHECKS" | grep -qE '"(fail|pending)"' || exit 8 ;;
+  "api "*) [ "$STUB_WF" = "1" ] || exit 1 ;;
+  *) [ -n "$STUB_DOWN" ] && exit 1 ;;
+esac
+[ -n "$STUB_DOWN" ] && exit 1
+exit 0
+`,
+);
+chmodSync(join(stubDir, 'gh'), 0o755);
+const checks = (...pairs) => JSON.stringify(pairs.map(([name, bucket]) => ({ name, workflow: 'Security', bucket })));
+const withGh = (env) => ({ PATH: `${stubDir}:${process.env.PATH}`, STUB_WF: '1', ...env });
+
 const decide = (command, cwd, env = {}) => {
   const out = execFileSync('node', [GUARD], {
     input: JSON.stringify({ tool_input: { command }, cwd }),
@@ -69,3 +88,16 @@ for (const [cmd, cwd, want] of cases)
   test(`${want.padEnd(4)} ${cmd.replace(/\/[^ ]*guard-\w+/g, '<repo>')}`, () => assert.equal(decide(cmd, cwd), want));
 
 test('HALLO_GUARD=off tắt guard', () => assert.equal(decide('git push', onDev, { HALLO_GUARD: 'off' }), 'pass'));
+
+test('gh pr merge chỉ qua khi check Security xanh', () => {
+  const merge = 'gh pr merge 7 --squash';
+  assert.equal(decide(merge, onFeat, withGh({ STUB_CHECKS: checks(['secret-scan', 'pass'], ['npm-audit', 'pass']) })), 'pass');
+  assert.equal(decide(merge, onFeat, withGh({ STUB_CHECKS: checks(['secret-scan', 'fail'], ['npm-audit', 'pass']) })), 'deny');
+  assert.equal(decide(merge, onFeat, withGh({ STUB_CHECKS: checks(['secret-scan', 'pending']) })), 'deny');
+  // Repo có workflow Security mà PR chưa có check → chưa chạy → chặn.
+  assert.equal(decide(merge, onFeat, withGh({ STUB_CHECKS: '[]' })), 'deny');
+  // Repo chưa áp baseline (không có workflow) → không chặn vì lý do này.
+  assert.equal(decide(merge, onFeat, withGh({ STUB_CHECKS: '[]', STUB_WF: '0' })), 'pass');
+  // Không kiểm được (gh lỗi) → hỏi lại, không tự cho qua.
+  assert.equal(decide('gh pr merge 7 -R o/r --squash', onFeat, withGh({ STUB_DOWN: '1' })), 'ask');
+});

@@ -27,6 +27,7 @@ Ngữ cảnh repo hiện tại:
 7. Làm đủ "việc kèm theo" (dòng `việc kèm theo:` ở trên): OpenAPI (R-013), migration, i18n en/vi/ja.
 8. Không stage `.env*` (trừ `.env.example` placeholder), key, token, dữ liệu khách hàng. Stage theo đường dẫn cụ thể.
 9. Không `--force` (chỉ `--force-with-lease` trên nhánh của mình), không `--no-verify`, không `gh pr merge --admin`.
+10. Không merge PR khi check `Security` (`secret-scan`, `npm-audit`) đỏ, đang chạy hoặc chưa chạy — guard chặn `gh pr merge`; merge trên web cũng phải đợi xanh.
 10. Thao tác phá hủy (`reset --hard`, `clean -f`, `branch -D`) chỉ khi user xác nhận rõ.
 
 Chi tiết và bảng tham chiếu: [references/conventions.md](references/conventions.md).
