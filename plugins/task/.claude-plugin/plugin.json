@@ -1,0 +1,22 @@
+{
+  "name": "task",
+  "version": "0.2.0",
+  "description": "Quy trình task: plan → issue + branch → review plan trên GitHub → code (/task:open, /task:go)",
+  "author": {
+    "name": "HalloJapan Group Platform Team"
+  },
+  "repository": "https://github.com/HallojapanAI/hallo-claude",
+  "license": "UNLICENSED",
+  "keywords": [
+    "workflow",
+    "plan",
+    "issue",
+    "github"
+  ],
+  "metadata": {
+    "shared": [
+      "hallo-ctx.mjs"
+    ]
+  },
+  "displayName": "Hallo Task"
+}

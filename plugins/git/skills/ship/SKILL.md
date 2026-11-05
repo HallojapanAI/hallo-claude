@@ -34,6 +34,7 @@ Quy ước: [conventions.md](${CLAUDE_PLUGIN_ROOT}/skills/flow/references/conven
    - `gh pr view --json number,url,state,isDraft` để biết đã có PR chưa.
    - Chưa có → `gh pr create --base dev --title "<commit chuẩn>" --body-file -` (+ `--draft`). Nhiều commit → title tóm tắt cả nhánh theo chuẩn commit.
    - Body tiếng Việt theo pr-body.md: điền thật (thay đổi, kết quả check đã chạy, `Refs/Fixes` từ tên nhánh + commit), xóa dòng checklist không áp dụng.
+   - Task từ `/task:open` (nhánh `<type>/<n>-…` hoặc file `$(git rev-parse --absolute-git-dir)/hallo-task.json` có `issue`) → thêm `Closes #<n>` để merge tự đóng issue.
    - Đã có → push là đủ; chỉ `gh pr edit --body-file -` nếu phạm vi thay đổi đáng kể.
    - `gh` chưa cài/chưa đăng nhập → in URL so sánh `https://github.com/<slug>/compare/dev...<branch>?expand=1` + body để dán, và nhắc `/setup:doctor`.
 

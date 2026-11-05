@@ -7,7 +7,7 @@ Git/GitHub, review, bảo mật và tài liệu **theo cùng một chuẩn**, v�
 
 ```sh
 claude plugin marketplace add HallojapanAI/hallo-claude
-claude plugin install git@hallo review@hallo sec@hallo kb@hallo setup@hallo
+claude plugin install git@hallo review@hallo sec@hallo kb@hallo setup@hallo task@hallo
 ```
 
 Hoặc để repo tự bật cho mọi người: chạy `/setup:repo` một lần trong hallo-api / hallo-web / hallo-system-knowledge
@@ -15,9 +15,25 @@ và commit `.claude/settings.json` (người khác chỉ cần trust thư mục 
 
 Kiểm máy: `/setup:doctor` · Máy mới: `/setup:init`.
 
+## Cập nhật plugin
+
+Khi có bản mới (version trong `plugin.json` tăng):
+
+```sh
+claude plugin marketplace update hallo      # tải danh sách plugin mới nhất
+claude plugin update task@hallo             # cập nhật từng plugin (git, review, sec, kb, setup, task)
+```
+
+Đang mở Claude thì gõ `/reload-plugins` (hoặc mở lại phiên). Plugin mới thêm vào marketplace (vd `task`) cần `claude plugin install <tên>@hallo` một lần,
+hoặc chạy lại `/setup:repo` để bật cho cả repo.
+
 ## Cheat sheet
 
 ```text
+/plan <yêu cầu>                     Claude khảo sát + viết plan (plan mode)
+/task:open                         issue mỗi repo + branch + đăng plan làm comment để review
+/task:go                           sau khi issue có label plan-approved: áp góp ý rồi code
+/task:status                       task đang ở bước nào
 /git:new feat HJ-022 qr revoke    tạo nhánh feat/HJ-022-qr-revoke từ origin/dev
 /review:diff                       tự review trước khi ship (quy tắc R-xxx)
 /git:ship                          commit → rebase → check → push → PR vào dev
@@ -28,7 +44,7 @@ Kiểm máy: `/setup:doctor` · Máy mới: `/setup:init`.
 /git:clean                         dọn nhánh đã merge
 ```
 
-Một ngày làm việc điển hình: `/git:new` → code → `/review:diff` → `/git:ship` → (bot review) → `/review:fix` → merge → `/kb:sync` → `/git:clean`.
+Một task điển hình: `/plan` → `/task:open` → (review, gắn `plan-approved`) → `/task:go` → code → `/review:diff` → `/git:ship` → (bot review) → `/review:fix` → merge → `/kb:sync` → `/git:clean`.
 
 ## Plugin
 
@@ -39,6 +55,7 @@ Một ngày làm việc điển hình: `/git:new` → code → `/review:diff` �
 | [sec](plugins/sec) | `scan` `secrets` | `secrets` tự chạy khi diff chạm `.env`/config |
 | [kb](plugins/kb) | `find` `sync` | Skill `context` tự đọc hallo-system-knowledge khi cần nghiệp vụ/kiến trúc |
 | [setup](plugins/setup) | `doctor` `init` `repo` | — |
+| [task](plugins/task) | `open` `go` `plan-update` `status` | — (quy trình: [workflow.md](plugins/task/skills/open/references/workflow.md)) |
 
 Gõ `/` rồi vài ký tự (vd `/ship`) — autocomplete tìm đúng lệnh.
 

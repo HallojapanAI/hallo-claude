@@ -10,6 +10,7 @@
 
 <!-- Xóa dòng không dùng. Fixes RV-xxx làm bot tự gắn fix-in-pr và đóng issue khi merge. -->
 Refs HJ-xxx
+Closes #n   <!-- issue của task (/task:open); bỏ nếu không có -->
 Fixes RV-xxx
 Fixes #xx
 
