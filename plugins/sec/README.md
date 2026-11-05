@@ -3,6 +3,7 @@
 | Lệnh | Việc |
 | --- | --- |
 | `/sec:scan [--all\|path] [--deps]` | Quét bảo mật thay đổi (hoặc toàn repo) theo checklist NestJS/Prisma + React/Vite và quy tắc SEC |
+| `/sec:harden [--check]` | Áp/kiểm chuẩn bảo mật repo: khối `.gitignore`, `.gitleaks.toml`, hook pre-commit, CI `secret-scan` + `npm audit`, Dependabot (bản chuẩn: `shared/security/`) |
 | `/sec:secrets [--staged\|--branch]` | Quét secret/PII nhanh trước commit/push (Claude cũng tự gọi khi diff chạm `.env`, config) |
 
 - `scan` chạy trong subagent `auditor` chỉ-đọc. Không bao giờ in giá trị secret.

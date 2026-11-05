@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 // Guard PreToolUse(Bash) của plugin git — chặn thao tác git nguy hiểm trước khi chạy.
 //   deny: push vào dev/main/master, force push (trừ --force-with-lease trên nhánh riêng), --no-verify,
-//         git add file .env, gh pr merge --admin, gh repo delete
+//         git add file .env / khóa / chứng chỉ / dump DB, gh pr merge --admin, gh repo delete,
+//         gh repo edit --visibility public
 //   ask : reset --hard, clean -f, checkout/restore toàn bộ, branch -D
 // Tắt tạm: khởi động Claude với HALLO_GUARD=off. Lệnh gõ với tiền tố `!` không đi qua hook.
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const PROTECTED = new Set(['dev', 'main', 'master']);
+// File không bao giờ được commit (cùng ý với khối hallo-security trong .gitignore). Migration .sql là code → cho qua.
+const SENSITIVE = /(\.(pem|key|p12|pfx|jks|kdbx|dump|sqlite3?|db|har)$|\.sql(\.gz)?$|(^|\/)id_(rsa|ecdsa|ed25519)$|(^|\/)cookies\.txt$)/i;
+const isSensitive = (a) => SENSITIVE.test(a) && !/(^|\/)migrations\//.test(a);
 
 if (process.env.HALLO_GUARD === 'off') process.exit(0);
 
@@ -111,6 +115,9 @@ for (const raw of segments) {
     if (sub === 'add') {
       const envFile = args.find((a) => /(^|\/)\.env($|\.(?!example$)[\w.-]+$)/.test(a));
       if (envFile) findings.deny.push(`không stage ${envFile} — secret chỉ nằm trên server (R-008)`);
+      const sensitive = args.filter((a) => !a.startsWith('-') && isSensitive(a));
+      if (sensitive.length)
+        findings.deny.push(`không stage ${sensitive.join(', ')} — khóa/chứng chỉ/dump dữ liệu không thuộc repo (R-008)`);
       if (has('-f', '--force')) findings.ask.push('git add --force có thể đưa file bị .gitignore (vd .env) vào commit');
     }
 
@@ -126,6 +133,10 @@ for (const raw of segments) {
     if (t[1] === 'pr' && t[2] === 'merge' && t.includes('--admin'))
       findings.deny.push('gh pr merge --admin bỏ qua required check `pr-review`');
     if (t[1] === 'repo' && t[2] === 'delete') findings.deny.push('gh repo delete bị cấm');
+    if (t[1] === 'repo' && t[2] === 'edit' && t.some((a, i) => (a === '--visibility' && t[i + 1] === 'public') || a === '--visibility=public'))
+      findings.deny.push('không đổi repo sang public bằng Claude — lead quyết định trên GitHub (runbooks/security-secrets.md)');
+    if (t[1] === 'repo' && t[2] === 'create' && t.includes('--public'))
+      findings.ask.push('tạo repo public: chắc chắn không chứa code/tài liệu nội bộ?');
   }
 }
 

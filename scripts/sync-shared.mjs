@@ -4,7 +4,7 @@
 //   node scripts/sync-shared.mjs          chép
 //   node scripts/sync-shared.mjs --check  chỉ kiểm, lệch thì thoát 1 (CI)
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const CHECK = process.argv.includes('--check');
@@ -28,7 +28,7 @@ for (const name of readdirSync(join(ROOT, 'plugins'))) {
       console.error(`✗ ${name}/scripts/${file} lệch với shared/${file} — chạy npm run sync`);
       drift++;
     } else {
-      mkdirSync(join(ROOT, 'plugins', name, 'scripts'), { recursive: true });
+      mkdirSync(dirname(dst), { recursive: true });
       copyFileSync(src, dst);
       chmodSync(dst, 0o755);
       console.log(`→ ${name}/scripts/${file}`);

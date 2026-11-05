@@ -2,3 +2,49 @@ node_modules/
 .DS_Store
 *.log
 .claude/settings.local.json
+
+# >>> hallo-security (do /sec:harden quản lý — sửa ở hallo-claude/shared/security/gitignore.base, không sửa tay)
+# Secret và cấu hình môi trường: chỉ nằm trên server / GitHub Secrets.
+.env
+.env.*
+!.env.example
+.envrc
+.direnv/
+.npmrc.local
+/secrets/
+/.secrets/
+# Khóa, chứng chỉ, kho mật khẩu
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.jks
+*.kdbx
+id_rsa*
+id_ecdsa*
+id_ed25519*
+# Dump / bản sao dữ liệu (có thể chứa dữ liệu khách hàng)
+*.sql
+# …trừ migration (Prisma): đây là code, phải commit
+!**/migrations/**/*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.orig
+# File người dùng tải lên, ảnh sản phẩm lưu local
+/images/
+/uploads/
+# Cookie / phiên đăng nhập khi thử API
+cookies.txt
+*.cookies
+*.har
+# Cấu hình cá nhân của công cụ
+.claude/settings.local.json
+.idea/
+.vscode/
+.DS_Store
+# <<< hallo-security

@@ -1,11 +1,25 @@
 {
   "name": "sec",
   "displayName": "Hallo Security",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Quét bảo mật NestJS/Prisma + React/Vite theo quy tắc SEC, quét secret trước commit/push",
   "author": { "name": "HalloJapan Group Platform Team" },
   "repository": "https://github.com/HallojapanAI/hallo-claude",
   "license": "UNLICENSED",
   "keywords": ["security", "secrets", "owasp"],
-  "metadata": { "shared": ["hallo-ctx.mjs", "kb-rules.mjs"] }
+  "metadata": {
+    "shared": [
+      "hallo-ctx.mjs",
+      "kb-rules.mjs",
+      "security/harden.mjs",
+      "security/secret-scan.mjs",
+      "security/gitleaks.toml",
+      "security/gitignore.base",
+      "security/templates/pre-commit",
+      "security/templates/security.yml",
+      "security/templates/npm-audit.yml",
+      "security/templates/dependabot.yml",
+      "security/templates/dependabot-npm.yml"
+    ]
+  }
 }

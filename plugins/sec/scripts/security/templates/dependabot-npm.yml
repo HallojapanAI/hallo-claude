@@ -1,0 +1,9 @@
+  - package-ecosystem: npm
+    directory: /
+    target-branch: {{BASE}}
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

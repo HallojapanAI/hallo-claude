@@ -1,0 +1,11 @@
+# hallo-security — do /sec:harden cài (bản gốc: hallo-claude/shared/security/templates/dependabot.yml).
+version: 2
+updates:
+{{NPM_UPDATES}}  - package-ecosystem: github-actions
+    directory: /
+    target-branch: {{BASE}}
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

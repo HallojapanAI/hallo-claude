@@ -1,0 +1,4 @@
+#!/bin/sh
+# hallo-security pre-commit — do /sec:harden cài (bản gốc: hallo-claude/shared/security/templates/pre-commit).
+# Chặn secret, file bị .gitignore và file lớn trước khi commit. Lỗi thật → sửa, đừng --no-verify.
+exec node "$(git rev-parse --show-toplevel)/scripts/secret-scan.mjs" --staged

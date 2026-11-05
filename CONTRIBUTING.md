@@ -28,6 +28,12 @@ Rồi mở PR (`/git:ship`). Plugin cả team cần → thêm `"<tên>@hallo": t
 | Độ dài SKILL.md | < 150 dòng; chi tiết đưa vào `references/` |
 | Script | Node ≥ 24, không dependency ngoài |
 
+## Bảo mật
+
+- Rule secret và khối `.gitignore` bảo mật chỉ sửa ở `shared/security/` (`gitleaks.toml`, `gitignore.base`), rồi `npm run sync`.
+  Các repo nhận bản mới khi chạy `/sec:harden` (hoặc `/setup:doctor` báo lệch).
+- Repo này **public**: không ghi host, IP, đường dẫn server, tên người, phát hiện bảo mật cụ thể. Hook pre-commit và CI `secret-scan` chặn phần lớn trường hợp.
+
 ## Script dùng chung
 
 Plugin được cài vào cache riêng, không đọc được file ngoài thư mục của nó, nên script chung phải **chép vào**

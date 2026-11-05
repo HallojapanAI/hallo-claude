@@ -29,5 +29,6 @@ Mẫu settings: [project-settings.json](${CLAUDE_PLUGIN_ROOT}/templates/project-
    Git/GitHub theo plugin `git@hallo`: nhánh từ `dev`, PR vào `dev`, Conventional Commits — `/git:ship` để ship.
    Check trước khi push: `<lệnh check của repo>`. Quy tắc review: `../hallo-system-knowledge/roadmap/review-rules.md`.
    ```
-3. `.gitignore` có `.claude/settings.local.json` chưa → thêm nếu thiếu.
+3. **Bảo mật**: chạy `node "${CLAUDE_PLUGIN_ROOT}/scripts/security/harden.mjs" apply` (khối `.gitignore`, gitleaks, hook pre-commit, CI, Dependabot);
+   xử lý dòng ⚠ như `/sec:harden` bước 4–6. Repo mới bắt buộc có baseline này trước PR đầu tiên.
 4. Không commit thay: gợi ý `/git:ship` với nhánh `chore/claude-setup`.

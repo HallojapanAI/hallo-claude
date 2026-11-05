@@ -1,0 +1,45 @@
+# hallo-security — do /sec:harden cài (bản gốc: hallo-claude/shared/security/templates/security.yml).
+# Job `secret-scan` là required check của nhánh bảo vệ: PR có secret không merge được.
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1' # thứ hai: quét toàn bộ lịch sử
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Binary ghim version + sha256 (gitleaks-action cần license khi chạy trong org).
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks && sudo mv gitleaks /usr/local/bin/ && rm gitleaks.tgz
+      - name: Scan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) RANGE="--log-opts=${BASE_SHA}..${HEAD_SHA}" ;;
+            push) if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then RANGE="--log-opts=${BEFORE}..${GITHUB_SHA}"; else RANGE=""; fi ;;
+            *) RANGE="" ;; # schedule / thủ công: toàn bộ lịch sử (.gitleaksignore chứa phát hiện cũ đã xoay)
+          esac
+          gitleaks git $RANGE --config .gitleaks.toml --redact --no-banner --exit-code 1
