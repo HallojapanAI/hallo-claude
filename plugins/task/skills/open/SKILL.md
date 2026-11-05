@@ -30,7 +30,7 @@ Quy trình đầy đủ: [workflow.md](references/workflow.md) · Quy ước nh�
    `node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs" repos <list>` → path, slug, base. Repo không tồn tại → dừng.
 3. **gh**: `gh auth status`. Chưa đăng nhập → dừng, nhắn người dùng chạy `! gh auth login`.
 4. **Trùng**: ở repo chính `gh issue list -R <slug> --state open --search "<tiêu đề> in:title"`. Có issue gần trùng → hỏi dùng lại hay tạo mới.
-5. **Label** (mỗi repo, idempotent): `gh label create plan --color 1D76DB --description "Plan đang chờ review" --force -R <slug>`,
+5. **Label** (mỗi repo, idempotent; `plan-approved` duyệt **riêng từng repo**): `gh label create plan --color 1D76DB --description "Plan đang chờ review" --force -R <slug>`,
    `plan-approved` (0E8A16, "Plan đã duyệt — Claude được bắt đầu code"), `type:<type>` (C5DEF5).
 6. **Issue chính**: `gh issue create -R <slug> --title "<type>: <tóm tắt tiếng Việt ≤ 70 ký tự>" --label plan,type:<type> --body-file <tmp>`.
    Body theo [issue-body.md](references/issue-body.md): Context 3–6 dòng rút từ plan, phạm vi repo, checklist PR (mục "Chia PR" trong plan), `Refs HJ-xxx` nếu có.

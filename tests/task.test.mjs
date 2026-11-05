@@ -50,3 +50,16 @@ test('linkify: tham chiếu repo có trên remote → permalink, file mới gi�
   assert.equal(stats.linked, 2);
   assert.deepEqual(stats.local, ['hallo-api/src/new/x.ts']);
 });
+
+test('tasks: tìm trạng thái task trong mọi repo của workspace', () => {
+  const ws = mkdtempSync(join(tmpdir(), 'ws-'));
+  for (const [name, issue] of [['hallo-api', 'Org/hallo-api#2'], ['hallo-web', 'Org/hallo-api#2'], ['other', 'Org/x#9']]) {
+    execFileSync('git', ['init', '-q', join(ws, name)]);
+    writeFileSync(join(ws, name, '.git', 'hallo-task.json'), JSON.stringify({ mainIssue: issue, issue: 2 }));
+  }
+  execFileSync('git', ['init', '-q', join(ws, 'kb')]);
+  const out = (filter) =>
+    JSON.parse(execFileSync('node', [script, 'tasks', ...(filter ? [filter] : [])], { cwd: join(ws, 'kb'), encoding: 'utf8' }));
+  assert.equal(out().length, 3);
+  assert.deepEqual(out('Org/hallo-api#2').map((t) => t.name).sort(), ['hallo-api', 'hallo-web']);
+});
