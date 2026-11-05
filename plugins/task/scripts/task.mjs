@@ -5,6 +5,7 @@
 //   node task.mjs chunks <plan.md> <outdir>   chia plan thành các phần ≤ 60.000 ký tự (giới hạn comment GitHub)
 //   node task.mjs repos [api,web,...]         đường dẫn + slug GitHub của các repo trong workspace
 //   node task.mjs state                       trạng thái task của repo hiện tại (JSON, {} nếu chưa có)
+//   node task.mjs tasks [mainIssue]           task đang mở trong mọi repo của workspace (chạy được từ bất kỳ repo nào)
 //   node task.mjs save '<json>'               gộp JSON vào trạng thái task của repo hiện tại
 //   node task.mjs linkify <in.md> <out.md>    `hallo-xxx/path[:L[-M]]` → permalink GitHub (commit của <remote>/dev, không có thì main);
 //                                             file chưa có trên remote (file sẽ tạo mới) giữ nguyên
@@ -114,6 +115,25 @@ function remoteResolver() {
   };
 }
 
+// Mọi repo cạnh nhau trong workspace có trạng thái task; lọc theo mainIssue nếu có.
+function workspaceTasks(mainIssue) {
+  const ws = workspace();
+  const out = [];
+  for (const name of existsSync(ws) ? readdirSync(ws) : []) {
+    const path = join(ws, name);
+    const gitDir = existsSync(join(path, '.git')) ? sh('git', ['rev-parse', '--absolute-git-dir'], path) : '';
+    const f = gitDir ? join(gitDir, 'hallo-task.json') : '';
+    if (!f || !existsSync(f)) continue;
+    try {
+      const state = JSON.parse(readFileSync(f, 'utf8'));
+      if (!mainIssue || state.mainIssue === mainIssue) out.push({ name, path, ...state });
+    } catch {
+      /* file hỏng → bỏ qua */
+    }
+  }
+  return out;
+}
+
 function stateFile() {
   const gitDir = sh('git', ['rev-parse', '--absolute-git-dir']);
   return gitDir ? join(gitDir, 'hallo-task.json') : '';
@@ -145,6 +165,10 @@ try {
     console.log(`linked ${stats.linked}; chưa có trên remote (file mới?): ${stats.local.length ? stats.local.join(', ') : 'không'}`);
   } else if (cmd === 'repos') console.log(JSON.stringify(repos(a), null, 2));
   else if (cmd === 'state') console.log(JSON.stringify(readState(), null, 2));
+  else if (cmd === 'tasks') {
+    const list = workspaceTasks(a);
+    console.log(list.length ? JSON.stringify(list, null, 2) : '[] (không có task nào trong workspace)');
+  }
   else if (cmd === 'save') {
     const f = stateFile();
     if (!f) console.log('không ở trong git repo');
@@ -153,7 +177,7 @@ try {
       writeFileSync(f, JSON.stringify(next, null, 2) + '\n');
       console.log(JSON.stringify(next));
     }
-  } else console.log('Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state | save <json>');
+  } else console.log('Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state | tasks [mainIssue] | save <json>');
 } catch (e) {
   console.log(`task.mjs: ${e.message}`);
 }
