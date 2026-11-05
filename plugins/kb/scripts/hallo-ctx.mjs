@@ -76,7 +76,9 @@ function context() {
     hints.push('CẢNH BÁO: có file .env trong thay đổi — không commit secret (R-008)');
   if (any(/\.env\.example$/)) hints.push('.env.example đổi → chỉ placeholder `xxxxxxxx` (R-008)');
 
-  const kb = [process.env.HALLO_KB, join(dirname(root), 'hallo-system-knowledge'), repo === 'hallo-system-knowledge' ? root : '']
+  // Worktree ngoài workspace (vd ~/tmp/hallo_worktrees/…) → tìm cạnh repo gốc (git common dir).
+  const mainRoot = dirname(git('rev-parse', '--path-format=absolute', '--git-common-dir') || join(root, '.git'));
+  const kb = [process.env.HALLO_KB, join(dirname(mainRoot), 'hallo-system-knowledge'), repo === 'hallo-system-knowledge' ? root : '']
     .filter(Boolean)
     .map((p) => resolve(p))
     .find((p) => existsSync(join(p, 'AGENTS.md')));
