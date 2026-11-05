@@ -37,6 +37,8 @@ hoặc chạy lại `/setup:repo` để bật cho cả repo.
 /sec:harden                        áp/kiểm chuẩn bảo mật repo (gitignore, gitleaks, hook, CI)
 /git:new feat HJ-022 qr revoke    tạo nhánh feat/HJ-022-qr-revoke từ origin/dev
 /review:diff                       tự review trước khi ship (quy tắc R-xxx)
+/review:publish api 12             review PR và đăng status pr-review (bằng gói Claude của bạn)
+/review:system                     review hệ thống sau khi merge vào dev → issue + design-review
 /git:ship                          commit → rebase → check → push → PR vào dev
 /git:status                        đang ở đâu, PR/check ra sao, làm gì tiếp
 /review:fix                        xử lý góp ý bot pr-review + reviewer
@@ -52,7 +54,7 @@ Một task điển hình: `/plan` → `/task:open` → (review, gắn `plan-appr
 | Plugin | Lệnh | Tự động (không cần gõ) |
 | --- | --- | --- |
 | [git](plugins/git) | `new` `commit` `ship` `pr` `sync` `status` `release` `clean` | Skill `flow` nạp quy ước khi nói "commit/push/PR"; **hook guard** chặn push vào dev/main/master, force push, `--no-verify`, `git add .env` |
-| [review](plugins/review) | `diff` `pr` `fix` | — |
+| [review](plugins/review) | `diff` `pr` `publish` `system` `fix` | — |
 | [sec](plugins/sec) | `scan` `secrets` `harden` | `secrets` tự chạy khi diff chạm `.env`/config |
 | [kb](plugins/kb) | `find` `sync` | Skill `context` tự đọc hallo-system-knowledge khi cần nghiệp vụ/kiến trúc |
 | [setup](plugins/setup) | `doctor` `init` `repo` | — |
