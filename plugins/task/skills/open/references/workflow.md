@@ -7,7 +7,8 @@ mọi quyết định có dấu vết trên GitHub, và quy trình đủ đều 
 1. /plan <yêu cầu>      Claude khảo sát code + hallo-system-knowledge, hỏi lại điểm cần chốt, viết plan
 2. /task:open           issue mỗi repo bị ảnh hưởng (link chéo) + feature branch + đăng plan làm comment
 3. (người) review       comment góp ý trên issue chính → gắn `plan-approved` ở issue của từng repo đồng ý
-4. /task:go             kiểm label, áp góp ý (Plan vN+1 nếu đổi), code trên đúng branch
+4. /task:go             kiểm label, áp góp ý (Plan vN+1 nếu đổi), code trên đúng branch;
+                        mỗi PR chạy `npm run local -- verify` (một lệnh, không cần AI) trước khi ship
 5. /review:diff → /git:ship (Closes #n) → /review:publish → /review:fix → merge
 6. /task:done            đóng issue GitHub không tự đóng (PR vào dev), dọn worktree/nhánh, đánh dấu DONE → /kb:sync
 ```
