@@ -1,7 +1,7 @@
 {
   "name": "git",
   "displayName": "Hallo Git",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Git/GitHub chuẩn HalloJapan: nhánh từ dev, Conventional Commits, PR vào dev, ship 1 lệnh, guard chặn push nhầm",
   "author": { "name": "HalloJapan Group Platform Team" },
   "repository": "https://github.com/HallojapanAI/hallo-claude",
