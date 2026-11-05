@@ -10,6 +10,6 @@
     "validate": "node scripts/validate.mjs",
     "new": "node scripts/new-plugin.mjs",
     "test": "node --test tests/*.test.mjs",
-    "prepare": "git config core.hooksPath scripts/git-hooks || true"
+    "prepare": "node -e \"try{require('child_process').execFileSync('git',['config','core.hooksPath','scripts/git-hooks'],{stdio:'ignore'})}catch{}\""
   }
 }

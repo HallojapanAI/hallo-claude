@@ -16,9 +16,13 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const START = '# >>> hallo-security';
 const END = '# <<< hallo-security';
+// File do baseline tạo: có marker, hoặc (bản cũ) ghi nguồn hallo-claude/shared/security.
 const MARK = 'hallo-security';
+const ours = (text) => text.includes(MARK) || text.includes('hallo-claude/shared/security');
 const HOOKS = 'scripts/git-hooks';
-const PREPARE = `git config core.hooksPath ${HOOKS} || true`;
+// Chạy được cả sh lẫn cmd (Windows); không có git (deploy từ git archive) thì bỏ qua.
+const LEGACY_PREPARE = `git config core.hooksPath ${HOOKS} || true`;
+const PREPARE = `node -e "try{require('child_process').execFileSync('git',['config','core.hooksPath','${HOOKS}'],{stdio:'ignore'})}catch{}"`;
 
 const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : null);
 const tpl = (name) => readFileSync(join(HERE, name), 'utf8');
@@ -67,6 +71,8 @@ export function withIgnoreBlock(current, block) {
   const b = block.trim();
   const s = text.indexOf(START);
   const e = text.indexOf(END);
+  // Mất dòng mở hoặc đóng → không đoán: báo để sửa tay, tránh ghi khối thứ hai.
+  if (s >= 0 !== e >= 0 || (s >= 0 && e < s)) return null;
   if (s >= 0 && e > s) return text.slice(0, s) + b + text.slice(e + END.length);
   return (text.trimEnd() ? text.trimEnd() + '\n\n' : '') + b + '\n';
 }
@@ -112,7 +118,13 @@ export function plan(root) {
   const changes = [];
   const gi = read(join(root, '.gitignore'));
   const giNext = withIgnoreBlock(gi, tpl('gitignore.base'));
-  if (gi !== giNext)
+  if (giNext === null)
+    changes.push({
+      path: '.gitignore',
+      conflict: true,
+      why: 'khối hallo-security thiếu dòng mở/đóng — sửa tay',
+    });
+  else if (gi !== giNext)
     changes.push({
       path: '.gitignore',
       content: giNext,
@@ -122,7 +134,7 @@ export function plan(root) {
     const now = read(join(root, path));
     if (now === content) continue;
     // File có sẵn không do baseline tạo (vd dependabot.yml riêng) → không ghi đè, báo để gộp tay.
-    if (now !== null && !now.includes(MARK))
+    if (now !== null && !ours(now))
       changes.push({ path, conflict: true, why: 'file riêng của repo — gộp tay' });
     else changes.push({ path, content, why: now === null ? 'thiếu' : 'lệch bản chuẩn' });
   }
@@ -136,6 +148,13 @@ export function plan(root) {
         path: 'package.json',
         content: withPrepare(pkgText),
         why: 'thiếu "prepare" bật hook',
+      });
+    } else if (prepare === LEGACY_PREPARE) {
+      // Bản baseline cũ (`|| true` không chạy trên cmd của Windows) → nâng lên bản hiện tại.
+      changes.push({
+        path: 'package.json',
+        content: pkgText.replace(JSON.stringify(LEGACY_PREPARE), JSON.stringify(PREPARE)),
+        why: '"prepare" bản cũ',
       });
     } else if (!prepare.includes('core.hooksPath'))
       changes.push({

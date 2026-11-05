@@ -33,11 +33,17 @@ test('bắt secret thật, cho qua placeholder', () => {
   // Rule .env chỉ áp cho file .env*: code đặt tên biến PASSWORD không bị bắt.
   assert.deepEqual(hits('src/a.ts', fake('const PASSWORD_MIN = ', '"minimum8"')), []);
   assert.deepEqual(hits('src/a.ts', fake('key: "sk-proj-', 'A'.repeat(30), '"')), ['hallo-openai-key']);
-  assert.deepEqual(hits('docs/x.md', fake('/ho', 'me/vunguyen/app/.env')), ['hallo-personal-path']);
+  assert.deepEqual(hits('docs/x.md', fake('/ho', 'me/alice/app/.env')), ['hallo-personal-path']);
   assert.deepEqual(hits('docs/x.md', '/home/<user>/app và /Users/user/x/'), []);
   assert.deepEqual(hits('docs/x.md', fake('liên hệ abc', '@gmail.com')), ['hallo-personal-email']);
   assert.deepEqual(hits('docs/x.md', 'noreply@gmail.com'), []);
   assert.deepEqual(hits('test/a.ts', fake('postgres://u:', 'realpass', '@h/db // gitleaks:allow')), []);
+  assert.deepEqual(hits('.env.example', 'SMTP_PASSWORD=<16-character App Password>'), []);
+  assert.deepEqual(hits('src/a.ts', fake('key: "sk-proj-', 'test', 'A'.repeat(24), '"')), []);
+  // Secret thật có chứa chuỗi con test/0000… vẫn bị bắt (allowlist neo đầu–cuối).
+  assert.deepEqual(hits('.env', fake('DATABASE_URL=postgres://app:', 'Contest2026x', '@db/app')), ['hallo-url-password']);
+  assert.deepEqual(hits('.env', fake('SMTP_PASSWORD=', 'Latest#Pw99')), ['hallo-env-secret']);
+  assert.deepEqual(hits('.env', fake('AUTH_SECRET=', 'q8Zr0000000Lk2')), ['hallo-env-secret']);
 });
 
 test('kết quả không chứa giá trị secret', () => {
@@ -58,6 +64,7 @@ test('khối hallo-security: thêm mới, thay khối cũ, giữ phần riêng c
   const old = 'node_modules/\n\n# >>> hallo-security\nold\n# <<< hallo-security\ndist/\n';
   assert.equal(withIgnoreBlock(old, block), 'node_modules/\n\n# >>> hallo-security\n.env\n# <<< hallo-security\ndist/\n');
   assert.equal(withIgnoreBlock(null, block), block);
+  assert.equal(withIgnoreBlock('# >>> hallo-security\n.env\n', block), null);
 });
 
 // Repo git tạm có baseline áp bằng harden.mjs, để thử hook thật.
@@ -84,7 +91,7 @@ test('harden apply ghi đủ baseline; check sau đó không còn lệch', () =>
   for (const f of ['.gitignore', '.gitleaks.toml', 'scripts/secret-scan.mjs', 'scripts/git-hooks/pre-commit', '.github/workflows/security.yml', '.github/dependabot.yml'])
     assert.ok(existsSync(join(dir, f)), f);
   assert.ok(statSync(join(dir, 'scripts/git-hooks/pre-commit')).mode & 0o100);
-  assert.match(readFileSync(join(dir, 'package.json'), 'utf8'), /core\.hooksPath scripts\/git-hooks/);
+  assert.match(readFileSync(join(dir, 'package.json'), 'utf8'), /core\.hooksPath/);
   assert.match(readFileSync(join(dir, '.github/workflows/security.yml'), 'utf8'), /npm audit --omit=dev/);
   assert.match(readFileSync(join(dir, '.github/dependabot.yml'), 'utf8'), /package-ecosystem: npm/);
   const out = execFileSync('node', [join(SEC, 'harden.mjs'), 'check', '--strict'], { cwd: dir, encoding: 'utf8' });
@@ -121,7 +128,24 @@ test('thêm "prepare" mà giữ nguyên định dạng package.json', async () =
   const { withPrepare } = await import('../shared/security/harden.mjs');
   const src = '{\n  "name": "x",\n  "engines": { "node": ">=24" },\n  "scripts": {\n    "test": "node --test \\"a}\\""\n  }\n}\n';
   const out = withPrepare(src);
-  assert.equal(JSON.parse(out).scripts.prepare, 'git config core.hooksPath scripts/git-hooks || true');
+  assert.match(JSON.parse(out).scripts.prepare, /core\.hooksPath/);
+  assert.doesNotMatch(JSON.parse(out).scripts.prepare, /\|\| true/);
   assert.match(out, /"engines": \{ "node": ">=24" \},/);
   for (const other of ['{\n  "name": "y"\n}\n', '{\n  "scripts": {}\n}\n']) assert.ok(JSON.parse(withPrepare(other)).scripts.prepare);
+});
+
+test('áp lại baseline: cập nhật file cũ của baseline, không động vào file riêng của repo', () => {
+  const { dir } = hardenedRepo();
+  const harden = (...a) => execFileSync('node', [join(SEC, 'harden.mjs'), ...a], { cwd: dir, encoding: 'utf8' });
+  // Bản cũ của baseline (header không có marker mới) → được cập nhật.
+  writeFileSync(join(dir, '.gitleaks.toml'), '# Rule — BẢN GỐC: hallo-claude/shared/security/gitleaks.toml\nold\n');
+  // File riêng của repo → giữ nguyên, báo gộp tay.
+  writeFileSync(join(dir, '.github/dependabot.yml'), 'version: 2\nupdates: []\n');
+  const out = harden('apply');
+  assert.match(out, /\.gitleaks\.toml: lệch bản chuẩn/);
+  assert.match(out, /dependabot\.yml: file riêng của repo/);
+  assert.equal(readFileSync(join(dir, '.gitleaks.toml'), 'utf8'), readFileSync(join(SEC, 'gitleaks.toml'), 'utf8'));
+  assert.equal(readFileSync(join(dir, '.github/dependabot.yml'), 'utf8'), 'version: 2\nupdates: []\n');
+  // Áp lần nữa: không còn gì đổi ngoài xung đột đã báo.
+  assert.doesNotMatch(harden('apply'), /→/);
 });

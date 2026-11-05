@@ -1,4 +1,4 @@
-# Rule secret của HalloJapan — BẢN GỐC: hallo-claude/shared/security/gitleaks.toml (do /sec:harden chép vào repo).
+# hallo-security · Rule secret của HalloJapan — BẢN GỐC: hallo-claude/shared/security/gitleaks.toml (do /sec:harden chép vào repo).
 # Dùng bởi: gitleaks (CI, máy có cài) và scripts/secret-scan.mjs (hook pre-commit khi máy chưa có gitleaks).
 # Regex phải chạy được trên cả Go RE2 và JavaScript: chỉ dùng (?i) ở đầu, không lookbehind.
 title = "hallo secret rules"
@@ -63,8 +63,11 @@ regexes = [
   '''(?i)^(?:changeme|change-me|placeholder|example|redacted|dummy|test|secret|password|pass|your[-_].*|<.*>|\$\{.*\}|\$[A-Z_]+)$''',
   '''(?i)^(?:user|username|runner|ubuntu|deploy|node|me|you|example|name|tên|ten)$''',
   '''(?i)^(?:noreply|no-reply|example|test|user)@''',
-  # Giá trị giả rõ ràng trong test fixture (key thật là ngẫu nhiên, không chứa các chuỗi này).
-  '''(?i)(?:test|fake|dummy|sample|example|abcdef|1234567890|0000000|server-level)''',
+  # Giá trị giả: phải BẮT ĐẦU bằng test/fake/dummy/sample/example (neo đầu–cuối, không khớp chuỗi con).
+  # Fixture khác → comment `gitleaks:allow` trên đúng dòng.
+  '''(?i)^(?:sk-(?:proj-)?)?(?:test|fake|dummy|sample|example)[\w.-]*$''',
+  # Mô tả trong ngoặc nhọn, vd SMTP_PASSWORD=<16-character App Password>
+  '''^<''',
 ]
 paths = [
   '''(?:^|/)package-lock\.json$''',

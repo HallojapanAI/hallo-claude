@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// secret-scan — chặn secret / dữ liệu nhạy cảm trước khi commit. Không dependency, Node ≥ 20.
+// hallo-security · secret-scan — chặn secret / dữ liệu nhạy cảm trước khi commit. Không dependency, Node ≥ 20.
 // BẢN GỐC: hallo-claude/shared/security/secret-scan.mjs (do /sec:harden chép vào scripts/ của repo).
 //
 //   node scripts/secret-scan.mjs --staged         hook pre-commit: phần đang stage
