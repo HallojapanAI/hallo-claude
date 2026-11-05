@@ -4,13 +4,19 @@
 //   node task.mjs latest-plan                 đường dẫn plan mới nhất trong ~/.claude/plans
 //   node task.mjs chunks <plan.md> <outdir>   chia plan thành các phần ≤ 60.000 ký tự (giới hạn comment GitHub)
 //   node task.mjs repos [api,web,...]         đường dẫn + slug GitHub của các repo trong workspace
-//   node task.mjs state                       trạng thái task của repo hiện tại (JSON, {} nếu chưa có)
-//   node task.mjs tasks [mainIssue]           task đang mở trong mọi repo của workspace (chạy được từ bất kỳ repo nào)
-//   node task.mjs save '<json>'               gộp JSON vào trạng thái task của repo hiện tại
+//   node task.mjs state [mainIssue]           task hiện tại (hoặc task chỉ định) của repo này (JSON, {} nếu chưa có)
+//   node task.mjs save '<json>'               gộp JSON vào task có `mainIssue` trong JSON (không có → task hiện tại),
+//                                             rồi đặt task đó làm hiện tại
+//   node task.mjs list [--all]                các task của repo này (bỏ task DONE, trừ khi --all)
+//   node task.mjs tasks [mainIssue] [--all]   task trong mọi repo của workspace (chạy được từ bất kỳ repo/worktree nào)
+//   node task.mjs use <mainIssue>             đổi task hiện tại của repo này
+//   node task.mjs forget <mainIssue>          xóa hẳn một task khỏi repo này
 //   node task.mjs linkify <in.md> <out.md>    `hallo-xxx/path[:L[-M]]` → permalink GitHub (commit của <remote>/dev, không có thì main);
 //                                             file chưa có trên remote (file sẽ tạo mới) giữ nguyên
 //
-// Trạng thái lưu trong <git-dir>/hallo-task.json → không bao giờ bị commit.
+// Trạng thái lưu trong <git common dir>/hallo-tasks.json (chung cho bản clone và mọi worktree của repo,
+// không bao giờ bị commit), dạng { current, tasks: { "<mainIssue>": {...} } } — một repo có nhiều task.
+// File cũ hallo-task.json (một task/repo) được tự chuyển sang khi đọc.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -120,36 +126,74 @@ function remoteResolver() {
   };
 }
 
-// Mọi repo cạnh nhau trong workspace có trạng thái task; lọc theo mainIssue nếu có.
-function workspaceTasks(mainIssue) {
+
+const STORE = 'hallo-tasks.json';
+const LEGACY = 'hallo-task.json';
+
+// Thư mục git dùng chung của repo (worktree trỏ về repo gốc) + git-dir riêng (nơi bản cũ có thể đã ghi).
+function gitDirs(cwd) {
+  const common = sh('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
+  const own = sh('git', ['rev-parse', '--absolute-git-dir'], cwd);
+  if (!common) return null;
+  // Bản cũ ghi vào git-dir riêng của từng worktree (<common>/worktrees/<tên>/).
+  const wt = join(common, 'worktrees');
+  const worktrees = existsSync(wt) ? readdirSync(wt).map((d) => join(wt, d)) : [];
+  return { common, legacy: [...new Set([common, own, ...worktrees].filter(Boolean))] };
+}
+
+const readJson = (f) => {
+  try {
+    return JSON.parse(readFileSync(f, 'utf8'));
+  } catch {
+    return null;
+  }
+};
+
+// Đọc kho task; gộp các file một-task cũ vào (không xóa chúng, chỉ không đọc lại sau khi đã ghi kho mới).
+export function loadStore(storePath, legacyPaths = []) {
+  const store = (existsSync(storePath) && readJson(storePath)) || { current: null, tasks: {} };
+  store.tasks ??= {};
+  if (!existsSync(storePath))
+    for (const f of legacyPaths) {
+      const old = existsSync(f) && readJson(f);
+      if (old?.mainIssue && !store.tasks[old.mainIssue]) {
+        store.tasks[old.mainIssue] = old;
+        store.current ??= old.mainIssue;
+      }
+    }
+  return store;
+}
+
+// Gộp patch vào task có key = patch.mainIssue (hoặc task hiện tại); task đó thành hiện tại.
+export function upsert(store, patch, now = new Date().toISOString()) {
+  const key = patch.mainIssue ?? store.current;
+  if (!key) throw new Error('chưa có task hiện tại — truyền "mainIssue" trong JSON');
+  store.tasks[key] = { ...store.tasks[key], ...patch, mainIssue: key, updatedAt: now };
+  store.current = key;
+  return store.tasks[key];
+}
+
+export const isOpen = (t) => t && t.status !== 'DONE';
+
+function storeAt(cwd = process.cwd()) {
+  const dirs = gitDirs(cwd);
+  if (!dirs) return null;
+  const path = join(dirs.common, STORE);
+  return { path, store: loadStore(path, dirs.legacy.map((d) => join(d, LEGACY))) };
+}
+const saveStore = ({ path, store }) => writeFileSync(path, JSON.stringify(store, null, 2) + '\n');
+
+function workspaceTasks(mainIssue, all) {
   const ws = workspace();
   const out = [];
   for (const name of existsSync(ws) ? readdirSync(ws) : []) {
     const path = join(ws, name);
-    const gitDir = existsSync(join(path, '.git')) ? sh('git', ['rev-parse', '--absolute-git-dir'], path) : '';
-    const f = gitDir ? join(gitDir, 'hallo-task.json') : '';
-    if (!f || !existsSync(f)) continue;
-    try {
-      const state = JSON.parse(readFileSync(f, 'utf8'));
-      if (!mainIssue || state.mainIssue === mainIssue) out.push({ name, path, ...state });
-    } catch {
-      /* file hỏng → bỏ qua */
-    }
+    if (!existsSync(join(path, '.git'))) continue;
+    const at = storeAt(path);
+    for (const t of Object.values(at?.store.tasks ?? {}))
+      if (mainIssue ? t.mainIssue === mainIssue : all || isOpen(t)) out.push({ name, path, ...t });
   }
   return out;
-}
-
-function stateFile() {
-  const gitDir = sh('git', ['rev-parse', '--absolute-git-dir']);
-  return gitDir ? join(gitDir, 'hallo-task.json') : '';
-}
-function readState() {
-  const f = stateFile();
-  try {
-    return f && existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {};
-  } catch {
-    return {};
-  }
 }
 
 const [cmd, a, b] = process.argv.slice(2);
@@ -169,20 +213,39 @@ try {
     writeFileSync(resolve(b), text);
     console.log(`linked ${stats.linked}; chưa có trên remote (file mới?): ${stats.local.length ? stats.local.join(', ') : 'không'}`);
   } else if (cmd === 'repos') console.log(JSON.stringify(repos(a), null, 2));
-  else if (cmd === 'state') console.log(JSON.stringify(readState(), null, 2));
-  else if (cmd === 'tasks') {
-    const list = workspaceTasks(a);
-    console.log(list.length ? JSON.stringify(list, null, 2) : '[] (không có task nào trong workspace)');
-  }
-  else if (cmd === 'save') {
-    const f = stateFile();
-    if (!f) console.log('không ở trong git repo');
+  else if (cmd === 'state') {
+    const at = storeAt();
+    const key = a && !a.startsWith('--') ? a : at?.store.current;
+    console.log(JSON.stringify((key && at?.store.tasks[key]) || {}, null, 2));
+  } else if (cmd === 'list') {
+    const at = storeAt();
+    const list = Object.values(at?.store.tasks ?? {}).filter((t) => a === '--all' || isOpen(t));
+    console.log(JSON.stringify({ current: at?.store.current ?? null, tasks: list }, null, 2));
+  } else if (cmd === 'tasks') {
+    const all = process.argv.includes('--all');
+    const list = workspaceTasks(a && !a.startsWith('--') ? a : null, all);
+    console.log(list.length ? JSON.stringify(list, null, 2) : '[] (không có task nào đang mở trong workspace)');
+  } else if (cmd === 'save' || cmd === 'use' || cmd === 'forget') {
+    const at = storeAt();
+    if (!at) console.log('không ở trong git repo');
+    else if (cmd === 'save') {
+      const task = upsert(at.store, JSON.parse(a));
+      saveStore(at);
+      console.log(JSON.stringify(task));
+    } else if (!at.store.tasks[a]) console.log(`không có task ${a} trong repo này`);
     else {
-      const next = { ...readState(), ...JSON.parse(a), updatedAt: new Date().toISOString() };
-      writeFileSync(f, JSON.stringify(next, null, 2) + '\n');
-      console.log(JSON.stringify(next));
+      if (cmd === 'use') at.store.current = a;
+      else {
+        delete at.store.tasks[a];
+        if (at.store.current === a) at.store.current = Object.keys(at.store.tasks)[0] ?? null;
+      }
+      saveStore(at);
+      console.log(`${cmd === 'use' ? 'task hiện tại' : 'đã xóa'}: ${a}`);
     }
-  } else console.log('Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state | tasks [mainIssue] | save <json>');
+  } else
+    console.log(
+      'Dùng: task.mjs latest-plan | chunks <plan> <outdir> | linkify <in> <out> | repos [api,web] | state [mainIssue] | save <json> | list [--all] | tasks [mainIssue] [--all] | use <mainIssue> | forget <mainIssue>',
+    );
 } catch (e) {
   console.log(`task.mjs: ${e.message}`);
 }

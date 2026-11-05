@@ -63,3 +63,31 @@ test('tasks: tìm trạng thái task trong mọi repo của workspace', () => {
   assert.equal(out().length, 3);
   assert.deepEqual(out('Org/hallo-api#2').map((t) => t.name).sort(), ['hallo-api', 'hallo-web']);
 });
+
+test('nhiều task mỗi repo: save theo mainIssue, task hiện tại, chuyển file cũ, dùng chung với worktree', () => {
+  const ws = mkdtempSync(join(tmpdir(), 'tasks-'));
+  const repo = join(ws, 'hallo-api');
+  const g = (...a) => execFileSync('git', a, { cwd: repo, stdio: 'ignore' });
+  execFileSync('git', ['init', '-q', '-b', 'dev', repo]);
+  g('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init');
+  // File cũ một-task (bản ≤ 0.3) được đọc như một task.
+  writeFileSync(join(repo, '.git', 'hallo-task.json'), JSON.stringify({ mainIssue: 'O/r#1', issue: 1, status: 'IN_PROGRESS' }));
+  const t = (...args) => execFileSync('node', [script, ...args], { cwd: repo, encoding: 'utf8', env: { ...process.env, HALLO_WORKSPACE: ws } });
+  assert.equal(JSON.parse(t('state')).mainIssue, 'O/r#1');
+  t('save', JSON.stringify({ mainIssue: 'O/r#2', issue: 2, branch: 'feat/2-x' }));
+  assert.equal(JSON.parse(t('state')).mainIssue, 'O/r#2', 'task vừa lưu thành hiện tại');
+  t('save', JSON.stringify({ status: 'IN_PROGRESS' })); // không có mainIssue → task hiện tại
+  assert.equal(JSON.parse(t('state', 'O/r#1')).status, 'IN_PROGRESS', 'task cũ vẫn còn');
+  assert.equal(JSON.parse(t('list')).tasks.length, 2);
+  // Worktree (kể cả ngoài workspace) thấy cùng kho task.
+  const wt = join(mkdtempSync(join(tmpdir(), 'wt-')), 'hallo-api-x');
+  g('worktree', 'add', '-q', '-b', 'feat/2-x', wt);
+  const fromWt = JSON.parse(execFileSync('node', [script, 'list'], { cwd: wt, encoding: 'utf8' }));
+  assert.equal(fromWt.tasks.length, 2);
+  // DONE bị lọc khỏi danh sách mặc định, vẫn thấy với --all; forget xóa hẳn.
+  t('save', JSON.stringify({ mainIssue: 'O/r#1', status: 'DONE' }));
+  assert.deepEqual(JSON.parse(t('tasks')).map((x) => x.mainIssue), ['O/r#2']);
+  assert.equal(JSON.parse(t('tasks', '--all')).length, 2);
+  t('forget', 'O/r#1');
+  assert.equal(JSON.parse(t('list', '--all')).tasks.length, 1);
+});

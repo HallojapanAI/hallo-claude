@@ -32,4 +32,5 @@ Task đang mở trong workspace: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs"
 | Có góp ý sau plan | sửa plan → `/task:plan-update` |
 | Đã `plan-approved`, chưa code | `/task:go` |
 | Đang code, chưa PR | `/review:diff` → `/git:ship` |
-| PR mở | `/git:status` / `/review:fix` |
+| PR mở | `/review:publish` → `/git:status` / `/review:fix` |
+| Mọi PR đã merge, issue còn mở / task chưa DONE | `/task:done` |
