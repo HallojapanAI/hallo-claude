@@ -15,6 +15,18 @@ và commit `.claude/settings.json` (người khác chỉ cần trust thư mục 
 
 Kiểm máy: `/setup:doctor` · Máy mới: `/setup:init`.
 
+## Cập nhật plugin
+
+Khi có bản mới (version trong `plugin.json` tăng):
+
+```sh
+claude plugin marketplace update hallo      # tải danh sách plugin mới nhất
+claude plugin update task@hallo             # cập nhật từng plugin (git, review, sec, kb, setup, task)
+```
+
+Đang mở Claude thì gõ `/reload-plugins` (hoặc mở lại phiên). Plugin mới thêm vào marketplace (vd `task`) cần `claude plugin install <tên>@hallo` một lần,
+hoặc chạy lại `/setup:repo` để bật cho cả repo.
+
 ## Cheat sheet
 
 ```text
