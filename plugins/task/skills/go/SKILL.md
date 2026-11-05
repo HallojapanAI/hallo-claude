@@ -23,7 +23,7 @@ Task đang mở trong workspace: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs"
 ## Làm
 
 1. **Xác định task**: input > task của repo hiện tại > task trong workspace ở trên (chạy được từ bất kỳ repo nào).
-   Nhiều task khác `mainIssue` → hỏi chọn. Không có → thử số trong tên branch (`feat/57-…`); vẫn không rõ → hỏi.
+   Nhiều task khác `mainIssue` → hỏi chọn (task DONE đã bị lọc). Không có → thử số trong tên branch (`feat/57-…`); vẫn không rõ → hỏi.
    Các repo của task = mọi mục cùng `mainIssue`.
 2. **Kiểm duyệt từng repo**: với mỗi repo, `gh issue view <issue> -R <repo> --json labels,state,url`.
    - Duyệt **riêng từng repo**: chỉ repo có issue gắn `plan-approved` mới được code.
@@ -36,7 +36,7 @@ Task đang mở trong workspace: !`node "${CLAUDE_PLUGIN_ROOT}/scripts/task.mjs"
    rồi báo người dùng các thay đổi. Góp ý mâu thuẫn/mơ hồ → hỏi trước khi code.
 5. **Branch**: ở mỗi repo **đã duyệt**, `git switch <branch>` từ trạng thái task (chưa có branch → tạo như `/task:open` bước 10).
    `git fetch origin` và rebase lên `origin/dev` nếu bị behind.
-6. **Trạng thái**: trong mỗi repo đã duyệt `task.mjs save '{"status":"IN_PROGRESS"}'`; comment 1 dòng lên issue của repo đó: `▶ Bắt đầu triển khai theo Plan vN`.
+6. **Trạng thái**: trong mỗi repo đã duyệt `task.mjs save '{"mainIssue":"<chính>","status":"IN_PROGRESS"}'` (luôn kèm `mainIssue`: một repo có thể có nhiều task); comment 1 dòng lên issue của repo đó: `▶ Bắt đầu triển khai theo Plan vN`.
 7. **Code**: làm theo plan, đúng thứ tự mục "Chia PR". Mỗi PR: code → test theo mục Verification → `/review:diff` → `/git:ship`
    (PR body có `Closes #<issue của repo đó>`). Đi lệch plan → ghi lại và báo trên issue, không âm thầm đổi phạm vi.
 

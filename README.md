@@ -34,6 +34,7 @@ hoặc chạy lại `/setup:repo` để bật cho cả repo.
 /task:open                         issue mỗi repo + branch + đăng plan làm comment để review
 /task:go                           sau khi issue có label plan-approved: áp góp ý rồi code
 /task:status                       task đang ở bước nào
+/task:done                         sau merge: đóng issue, dọn worktree/nhánh, đánh dấu DONE
 /sec:harden                        áp/kiểm chuẩn bảo mật repo (gitignore, gitleaks, hook, CI)
 /git:new feat HJ-022 qr revoke    tạo nhánh feat/HJ-022-qr-revoke từ origin/dev
 /review:diff                       tự review trước khi ship (quy tắc R-xxx)
@@ -58,7 +59,7 @@ Một task điển hình: `/plan` → `/task:open` → (review, gắn `plan-appr
 | [sec](plugins/sec) | `scan` `secrets` `harden` | `secrets` tự chạy khi diff chạm `.env`/config |
 | [kb](plugins/kb) | `find` `sync` | Skill `context` tự đọc hallo-system-knowledge khi cần nghiệp vụ/kiến trúc |
 | [setup](plugins/setup) | `doctor` `init` `repo` | — |
-| [task](plugins/task) | `open` `go` `plan-update` `status` | — (quy trình: [workflow.md](plugins/task/skills/open/references/workflow.md)) |
+| [task](plugins/task) | `open` `go` `plan-update` `status` `done` | — (quy trình: [workflow.md](plugins/task/skills/open/references/workflow.md)) |
 
 Gõ `/` rồi vài ký tự (vd `/ship`) — autocomplete tìm đúng lệnh.
 
