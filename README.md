@@ -67,9 +67,9 @@ Gõ `/` rồi vài ký tự (vd `/ship`) — autocomplete tìm đúng lệnh.
 
 Đầy đủ: [plugins/git/skills/flow/references/conventions.md](plugins/git/skills/flow/references/conventions.md).
 
-- `dev` = nhánh tích hợp và base của mọi PR (push dev = deploy dev + review hệ thống). `main`/`master` = release.
+- `dev` = nhánh tích hợp và base của mọi PR (push dev = deploy dev + review hệ thống). `main` = release (PR `dev → main`, merge commit).
 - Nhánh `<type>/<HJ-xxx|RV-xxx|#n>-<slug>`; commit Conventional Commits tiếng Anh; PR/tài liệu tiếng Việt.
-- PR vào `dev`, squash merge, cần status `pr-review` + 1 approve. `Fixes RV-xxx` / `Refs HJ-xxx` trong body.
+- PR vào `dev`, rebase merge (mỗi commit phải chuẩn), cần status `pr-review` + 1 approve. `Fixes RV-xxx` / `Refs HJ-xxx` trong body.
 - Quy tắc review R-xxx và việc RV-xxx sống ở **hallo-system-knowledge** — plugin đọc trực tiếp, không chép.
 
 ## Workspace

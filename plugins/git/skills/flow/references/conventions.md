@@ -6,7 +6,7 @@ hallo-system-knowledge đang vận hành (CI `deploy-dev.yml`, `review-trigger.y
 ## 1. Mô hình nhánh
 
 ```
-feat/HJ-022-qr-revoke ──PR (squash)──► dev ──PR release (merge commit)──► main | master
+feat/HJ-022-qr-revoke ──PR (rebase)──► dev ──PR release (merge commit)──► main
 fix/RV-002-google-email ─┘              │
                                         ├─ push dev = deploy VPS dev (deploy-dev.yml)
                                         └─ push dev = review hệ thống tầng 2 (hallo-system-knowledge)
@@ -15,10 +15,11 @@ fix/RV-002-google-email ─┘              │
 | Nhánh | Vai trò | Ai ghi |
 | --- | --- | --- |
 | `dev` | Nhánh tích hợp, **base của mọi PR**. Code mới nhất. | Chỉ qua PR (required check `pr-review`) |
-| `main` (web) / `master` (api) | Nhánh release (default branch trên GitHub) | Chỉ qua PR release từ `dev` |
+| `main` | Nhánh release (default branch trên GitHub) | Chỉ qua PR release từ `dev` |
 | `<type>/<ref>-<slug>` | Nhánh làm việc, sống ngắn (≤ 3 ngày) | Tác giả |
 
 - Không push thẳng `dev`/`main`/`master` — guard hook chặn.
+- Repo **tắt** "Automatically delete head branches": PR release có head là chính `dev`, bật tự xóa thì merge release sẽ xóa luôn `dev`.
 - Nhánh làm việc luôn tạo từ `origin/dev` mới nhất.
 - Cập nhật nhánh bằng **rebase** lên `origin/dev`, push lại bằng `--force-with-lease` (chỉ trên nhánh của mình).
 - PR nháp (draft) **không** được bot review tầng 1 — dùng draft cho WIP, chuyển ready khi muốn review.
@@ -58,7 +59,9 @@ Ví dụ: `feat/HJ-022-qr-revoke`, `fix/RV-002-google-email-verified`, `chore/bu
 
 ## 4. Pull Request
 
-- **Base: `dev`**. Title = dòng commit chuẩn (`feat(qr): add label revoke flow`) vì PR được **squash merge**.
+- **Base: `dev`**. PR được **rebase merge**: từng commit của nhánh lên `dev` nguyên vẹn (hash mới), không gộp.
+  - Vì vậy **mỗi commit** phải đạt chuẩn mục 3 trước khi merge — gộp/sửa commit `wip`, `fixup`, "address review" bằng rebase trên nhánh của mình rồi `--force-with-lease`.
+  - Title PR = dòng commit chính (`feat(qr): add label revoke flow`) — dùng cho release note.
 - Body: theo [pr-body.md](pr-body.md) — tiếng Việt.
 - Liên kết bắt buộc khi có:
   - `Refs HJ-022` — task roadmap (repo hallo-system-knowledge).
@@ -66,8 +69,8 @@ Ví dụ: `feat/HJ-022-qr-revoke`, `fix/RV-002-google-email-verified`, `chore/bu
   - `Fixes #34` — issue GitHub trong repo.
 - Kích thước: mục tiêu ≤ 400 dòng đổi (trừ file sinh: `openapi.json`, `schema.d.ts`, migration lock). Lớn hơn → tách PR.
 - Merge khi: CI xanh + status `pr-review` = success + ≥ 1 approve. Không `--admin`.
-- Kiểu merge: `squash` cho PR vào `dev`; `merge commit` cho PR release `dev → main/master`.
-- Sau merge: xóa nhánh remote (GitHub tự xóa) + `/git:clean` ở local.
+- Kiểu merge: `rebase` cho PR vào `dev` (repo tắt squash); `merge commit` cho PR release `dev → main`.
+- Sau merge: `/git:clean` — xóa nhánh local và nhánh remote của mình (GitHub không tự xóa nữa).
 
 ## 5. Việc đi kèm bắt buộc theo loại thay đổi
 
@@ -97,8 +100,8 @@ Node theo `.nvmrc` (24.x). CI chạy đúng các lệnh này trên `dev`, đỏ 
 
 ## 7. Release
 
-- PR `dev → main` (web) / `dev → master` (api), title `release: YYYY-MM-DD`, body = danh sách PR từ lần release trước, nhóm theo type.
-- Merge commit, không squash (giữ lịch sử từng PR). Gắn tag `vYYYY.MM.DD` sau khi merge.
+- PR `dev → main`, title `release: YYYY-MM-DD`, body = danh sách PR từ lần release trước, nhóm theo type.
+- **Merge commit**, không rebase/squash: rebase merge tạo hash mới trên `main`, `main` lệch lịch sử với `dev` và lần release sau bị conflict. Gắn tag `vYYYY.MM.DD` sau khi merge.
 
 ## 8. Mức độ & tiêu chí (dùng chung cho review/security)
 

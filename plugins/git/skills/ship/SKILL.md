@@ -53,5 +53,5 @@ Quy ước: [conventions.md](${CLAUDE_PLUGIN_ROOT}/skills/flow/references/conven
 ✓ ship feat/HJ-022-qr-revoke → PR #45 (ready)  <url>
   commits: 2 · check: pass · secret: sạch · security: pass · base: dev (up to date)
   liên quan: Refs HJ-022
-  tiếp: /review:publish <api|web> <số PR> (status pr-review) → 1 approve → squash merge
+  tiếp: /review:publish <api|web> <số PR> (status pr-review) → 1 approve → rebase merge
 ```

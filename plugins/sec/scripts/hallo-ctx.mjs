@@ -141,6 +141,12 @@ const SECTIONS = {
     git('fetch', 'origin', '--prune', '--quiet');
     const keep = (b) => b && !PROTECTED.includes(b) && b !== git('rev-parse', '--abbrev-ref', 'HEAD');
     const merged = git('branch', '--merged', 'origin/dev', '--format=%(refname:short)').split('\n').filter(keep);
+    // Rebase merge: commit lên dev với hash mới → `--merged` không thấy; nhánh đã vào dev khi mọi
+    // commit của nó có bản tương đương trên origin/dev (`git cherry` không còn dòng `+`).
+    const rebased = git('branch', '--no-merged', 'origin/dev', '--format=%(refname:short)')
+      .split('\n')
+      .filter(keep)
+      .filter((b) => { const c = git('cherry', 'origin/dev', b); return c && !c.split('\n').some((l) => l.startsWith('+')); });
     const gone = git('branch', '--format=%(refname:short) %(upstream:track)')
       .split('\n')
       .filter((l) => l.endsWith('[gone]'))
@@ -148,7 +154,8 @@ const SECTIONS = {
       .filter(keep);
     return [
       ['merged vào origin/dev', merged.join('\n') || '(không có)'],
-      ['upstream đã xóa (thường là PR đã squash merge)', gone.join('\n') || '(không có)'],
+      ['đã rebase merge vào origin/dev', rebased.join('\n') || '(không có)'],
+      ['upstream đã xóa', gone.filter((b) => !rebased.includes(b)).join('\n') || '(không có)'],
     ];
   },
   secrets: () => [
