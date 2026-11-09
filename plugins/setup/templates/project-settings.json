@@ -12,5 +12,19 @@
     "kb@hallo": true,
     "setup@hallo": true,
     "task@hallo": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && [ -f package-lock.json ] && [ ! -d node_modules ]; then npm ci --no-audit --no-fund && npm run --if-present db:generate; fi",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
   }
 }
