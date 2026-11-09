@@ -8,8 +8,8 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { gate } from './security/merge-gate.mjs';
+import { INTEGRATION, PROTECTED } from './company.mjs';
 
-const PROTECTED = new Set(['dev', 'main', 'master']);
 // File không bao giờ được commit (cùng ý với khối hallo-security trong .gitignore). Migration .sql là code → cho qua.
 const SENSITIVE = /(\.(pem|key|p12|pfx|jks|kdbx|dump|sqlite3?|db|har)$|\.sql(\.gz)?$|(^|\/)id_(rsa|ecdsa|ed25519)$|(^|\/)cookies\.txt$)/i;
 const isSensitive = (a) => SENSITIVE.test(a) && !/(^|\/)migrations\//.test(a);
@@ -103,7 +103,7 @@ for (const raw of segments) {
       const hit = targets.filter((b) => PROTECTED.has(b));
       if (hit.length)
         findings.deny.push(
-          `không push thẳng vào ${hit.join(', ')} (push dev = deploy + review hệ thống). Tạo nhánh bằng /git:new rồi mở PR bằng /git:ship`,
+          `không push thẳng vào ${hit.join(', ')} (push ${INTEGRATION} = deploy + review hệ thống). Tạo nhánh bằng /git:new rồi mở PR bằng /git:ship`,
         );
       if ((force || plusForce) && !lease)
         findings.deny.push('force push bị cấm; trên nhánh riêng dùng `git push --force-with-lease`');

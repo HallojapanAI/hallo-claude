@@ -1,11 +1,32 @@
 {
   "name": "setup",
   "displayName": "Hallo Setup",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Onboard máy mới, kiểm môi trường (doctor), gắn cấu hình Claude chuẩn team vào repo",
-  "author": { "name": "HalloJapan Group Platform Team" },
+  "author": {
+    "name": "HalloJapan Group Platform Team"
+  },
   "repository": "https://github.com/HallojapanAI/hallo-claude",
   "license": "UNLICENSED",
-  "keywords": ["setup", "onboarding", "doctor"],
-  "metadata": { "shared": ["hallo-ctx.mjs", "security/harden.mjs", "security/secret-scan.mjs", "security/gitleaks.toml", "security/gitignore.base", "security/templates/pre-commit", "security/templates/security.yml", "security/templates/npm-audit.yml", "security/templates/dependabot.yml", "security/templates/dependabot-npm.yml"] }
+  "keywords": [
+    "setup",
+    "onboarding",
+    "doctor"
+  ],
+  "metadata": {
+    "shared": [
+      "company.mjs",
+      "company.json",
+      "hallo-ctx.mjs",
+      "security/harden.mjs",
+      "security/secret-scan.mjs",
+      "security/gitleaks.toml",
+      "security/gitignore.base",
+      "security/templates/pre-commit",
+      "security/templates/security.yml",
+      "security/templates/npm-audit.yml",
+      "security/templates/dependabot.yml",
+      "security/templates/dependabot-npm.yml"
+    ]
+  }
 }

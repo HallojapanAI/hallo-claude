@@ -1,0 +1,17 @@
+{
+  "$comment": "Mọi thứ gắn với công ty của bộ plugin này nằm ở đây. Công ty khác: clone repo, sửa file này (+ đổi tên hallo-*). BẢN GỐC: shared/company.json; bản trong plugins/*/scripts/ do npm run sync chép ra.",
+  "org": "HallojapanAI",
+  "marketplace": "hallo",
+  "pluginsRepo": "hallo-claude",
+  "kb": "hallo-system-knowledge",
+  "kbMarker": "AGENTS.md",
+  "branches": { "integration": "dev", "release": "main", "protected": ["dev", "main", "master"] },
+  "refIds": ["HJ-\\d{3}", "RV-\\d{3}"],
+  "worktrees": "~/tmp/hallo_worktrees",
+  "repos": {
+    "hallo-api": { "alias": "api", "kind": "api", "check": "npm run check && npm test", "extra": "npm run test:integration (cần PostgreSQL/Redis)", "nvmrc": true, "env": true, "deps": true },
+    "hallo-web": { "alias": "web", "kind": "web", "check": "npm run check && npm test", "extra": "npm run test:e2e (Playwright)", "nvmrc": true, "deps": true },
+    "hallo-system-knowledge": { "alias": "kb", "kind": "kb", "check": "npm run kb:check", "extra": "npm run kb:gen" },
+    "hallo-claude": { "alias": "claude", "kind": "plugins", "check": "npm run validate", "extra": "", "optional": true }
+  }
+}

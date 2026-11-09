@@ -10,6 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { INTEGRATION, PROTECTED as PROTECTED_SET, company, refIdRegex, repoInfo } from './company.mjs';
 
 const sh = (cmd, args, cwd) => {
   try {
@@ -20,17 +21,8 @@ const sh = (cmd, args, cwd) => {
 };
 const git = (...args) => sh('git', args, process.cwd());
 
-const SYSTEMS = {
-  'hallo-api': {
-    kind: 'api',
-    check: 'npm run check && npm test',
-    extra: 'npm run test:integration (cần PostgreSQL/Redis)',
-  },
-  'hallo-web': { kind: 'web', check: 'npm run check && npm test', extra: 'npm run test:e2e (Playwright)' },
-  'hallo-system-knowledge': { kind: 'kb', check: 'npm run kb:check', extra: 'npm run kb:gen' },
-  'hallo-claude': { kind: 'plugins', check: 'npm run validate', extra: '' },
-};
-const PROTECTED = ['dev', 'main', 'master'];
+// Tên repo, lệnh check, nhánh bảo vệ… đọc từ company.json (một chỗ cho cả bộ plugin).
+const PROTECTED = [...PROTECTED_SET];
 
 function context() {
   const root = git('rev-parse', '--show-toplevel');
@@ -39,11 +31,11 @@ function context() {
   const remote = git('remote', 'get-url', 'origin');
   const slug = (remote.match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/) ?? [])[1] ?? '';
   const repo = slug ? slug.split('/')[1] : basename(root);
-  const sys = SYSTEMS[repo] ?? { kind: 'other', check: '', extra: '' };
+  const sys = repoInfo(repo);
 
   const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
   const defaultBranch = git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^origin\//, '') || 'main';
-  const base = git('rev-parse', '--verify', '--quiet', 'refs/remotes/origin/dev') ? 'dev' : defaultBranch;
+  const base = git('rev-parse', '--verify', '--quiet', `refs/remotes/origin/${INTEGRATION}`) ? INTEGRATION : defaultBranch;
   const upstream = git('rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}');
   const [behind, ahead] = (git('rev-list', '--left-right', '--count', `origin/${base}...HEAD`) || '0\t0')
     .split(/\s+/)
@@ -78,12 +70,12 @@ function context() {
 
   // Worktree ngoài workspace (vd ~/tmp/hallo_worktrees/…) → tìm cạnh repo gốc (git common dir).
   const mainRoot = dirname(git('rev-parse', '--path-format=absolute', '--git-common-dir') || join(root, '.git'));
-  const kb = [process.env.HALLO_KB, join(dirname(mainRoot), 'hallo-system-knowledge'), repo === 'hallo-system-knowledge' ? root : '']
+  const kb = [process.env.HALLO_KB, join(dirname(mainRoot), company.kb), repo === company.kb ? root : '']
     .filter(Boolean)
     .map((p) => resolve(p))
-    .find((p) => existsSync(join(p, 'AGENTS.md')));
+    .find((p) => existsSync(join(p, company.kbMarker)));
 
-  const refMatch = branch.match(/\b(HJ-\d{3}|RV-\d{3})\b/i);
+  const refMatch = branch.match(refIdRegex());
   let nodeWant = '';
   try {
     nodeWant = readFileSync(join(root, '.nvmrc'), 'utf8').trim();
@@ -129,38 +121,38 @@ const SECTIONS = {
   status: () => {
     const pr = sh('gh', ['pr', 'view', '--json', 'number,url,state,isDraft,reviewDecision,mergeable,statusCheckRollup'], process.cwd());
     return [
-      ['commit chưa vào dev', git('log', '--oneline', 'origin/dev..HEAD').split('\n').slice(0, 15).join('\n') || '(không có)'],
+      [`commit chưa vào ${INTEGRATION}`, git('log', '--oneline', `origin/${INTEGRATION}..HEAD`).split('\n').slice(0, 15).join('\n') || '(không có)'],
       ['PR', pr || '(chưa có PR, hoặc gh chưa cài/đăng nhập)'],
     ];
   },
   diffstat: () => [
-    ['so với origin/dev (đã commit)', git('diff', '--stat', 'origin/dev...HEAD').split('\n').slice(-30).join('\n') || '(không có)'],
+    [`so với origin/${INTEGRATION} (đã commit)`, git('diff', '--stat', `origin/${INTEGRATION}...HEAD`).split('\n').slice(-30).join('\n') || '(không có)'],
     ['chưa commit', git('diff', '--stat', 'HEAD').split('\n').slice(-20).join('\n') || '(không có)'],
   ],
   clean: () => {
     git('fetch', 'origin', '--prune', '--quiet');
     const keep = (b) => b && !PROTECTED.includes(b) && b !== git('rev-parse', '--abbrev-ref', 'HEAD');
-    const merged = git('branch', '--merged', 'origin/dev', '--format=%(refname:short)').split('\n').filter(keep);
+    const merged = git('branch', '--merged', `origin/${INTEGRATION}`, '--format=%(refname:short)').split('\n').filter(keep);
     // Rebase merge: commit lên dev với hash mới → `--merged` không thấy; nhánh đã vào dev khi mọi
     // commit của nó có bản tương đương trên origin/dev (`git cherry` không còn dòng `+`).
-    const rebased = git('branch', '--no-merged', 'origin/dev', '--format=%(refname:short)')
+    const rebased = git('branch', '--no-merged', `origin/${INTEGRATION}`, '--format=%(refname:short)')
       .split('\n')
       .filter(keep)
-      .filter((b) => { const c = git('cherry', 'origin/dev', b); return c && !c.split('\n').some((l) => l.startsWith('+')); });
+      .filter((b) => { const c = git('cherry', `origin/${INTEGRATION}`, b); return c && !c.split('\n').some((l) => l.startsWith('+')); });
     const gone = git('branch', '--format=%(refname:short) %(upstream:track)')
       .split('\n')
       .filter((l) => l.endsWith('[gone]'))
       .map((l) => l.split(' ')[0])
       .filter(keep);
     return [
-      ['merged vào origin/dev', merged.join('\n') || '(không có)'],
-      ['đã rebase merge vào origin/dev', rebased.join('\n') || '(không có)'],
+      [`merged vào origin/${INTEGRATION}`, merged.join('\n') || '(không có)'],
+      [`đã rebase merge vào origin/${INTEGRATION}`, rebased.join('\n') || '(không có)'],
       ['upstream đã xóa', gone.filter((b) => !rebased.includes(b)).join('\n') || '(không có)'],
     ];
   },
   secrets: () => [
     ['staged', git('diff', '--cached', '--name-only').split('\n').slice(0, 50).join('\n') || '(không có)'],
-    ['branch (chưa có trên origin/dev)', git('diff', '--name-only', 'origin/dev...HEAD').split('\n').slice(0, 50).join('\n') || '(không có)'],
+    [`branch (chưa có trên origin/${INTEGRATION})`, git('diff', '--name-only', `origin/${INTEGRATION}...HEAD`).split('\n').slice(0, 50).join('\n') || '(không có)'],
     ['gitleaks', sh('gitleaks', ['version']) ? 'có' : 'không có (dùng regex)'],
   ],
 };
