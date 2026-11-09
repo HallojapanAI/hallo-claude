@@ -10,6 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { INTEGRATION, company, repoKind } from './company.mjs';
 
 const sh = (args) => {
   try {
@@ -22,18 +23,20 @@ const sh = (args) => {
 const root = sh(['rev-parse', '--show-toplevel']);
 const remote = sh(['remote', 'get-url', 'origin']);
 const repo = (remote.match(/\/([^/]+?)(?:\.git)?$/) ?? [])[1] ?? (root ? basename(root) : '');
-const kind = { 'hallo-api': 'api', 'hallo-web': 'web' }[repo] ?? null;
+const kind = ['api', 'web'].includes(repoKind(repo)) ? repoKind(repo) : null;
 const SEC = process.argv.includes('--sec');
 const ALL = process.argv.includes('--all-rv');
 
-const kb = [process.env.HALLO_KB, root && join(dirname(root), 'hallo-system-knowledge')]
+// Worktree ngoài workspace → tìm cạnh repo gốc (git common dir).
+const mainRoot = root ? dirname(sh(['rev-parse', '--path-format=absolute', '--git-common-dir']) || join(root, '.git')) : '';
+const kb = [process.env.HALLO_KB, mainRoot && join(dirname(mainRoot), company.kb)]
   .filter(Boolean)
   .map((p) => resolve(p))
   .find((p) => existsSync(join(p, 'roadmap', 'review-rules.md')));
 
 if (!kb) {
   console.log(
-    '(không tìm thấy hallo-system-knowledge cạnh repo này — đặt HALLO_KB hoặc chạy /setup:init. ' +
+    `(không tìm thấy ${company.kb} cạnh repo này — đặt HALLO_KB hoặc chạy /setup:init. ` +
       'Review vẫn chạy nhưng không đối chiếu được quy tắc R-xxx.)',
   );
   process.exit(0);
@@ -64,7 +67,7 @@ if (!rules.length) console.log('(không có quy tắc áp dụng)');
 
 // design-review.md: ID | Tiêu chí | Mức | Hệ thống | Trạng thái | Vấn đề | Bằng chứng | Khắc phục | Nghiệm thu | Liên quan
 const changed = [
-  ...new Set([sh(['diff', '--name-only', 'origin/dev...HEAD']), sh(['diff', '--name-only', 'HEAD'])].join('\n').split('\n').filter(Boolean)),
+  ...new Set([sh(['diff', '--name-only', `origin/${INTEGRATION}...HEAD`]), sh(['diff', '--name-only', 'HEAD'])].join('\n').split('\n').filter(Boolean)),
 ];
 const open = rows('roadmap/design-review.md').filter(
   (r) => !['DONE', 'WONTFIX'].includes(r[4]) && applies(r[3]) && (!SEC || r[1] === 'SEC'),

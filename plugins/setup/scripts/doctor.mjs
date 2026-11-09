@@ -6,10 +6,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { plan as securityPlan } from './security/harden.mjs';
+import { company, repoNames, requiredRepos } from './company.mjs';
 
-const ORG = 'HallojapanAI';
-const REPOS = ['hallo-api', 'hallo-web', 'hallo-system-knowledge', 'hallo-claude'];
-const MARKET = 'hallo';
+const ORG = company.org;
+const REPOS = repoNames;
+const MARKET = company.marketplace;
+const KB = company.kb;
+const withFlag = (flag) => REPOS.filter((r) => company.repos[r][flag]);
 
 const run = (cmd, args, opts = {}) => {
   try {
@@ -38,7 +41,7 @@ const add = (group, name, status, detail, fix = '') => checks.push({ group, name
 
 // Công cụ
 const nodeV = process.version.slice(1);
-const nvmrc = ['hallo-api', 'hallo-web'].map((r) => join(ws, r, '.nvmrc')).find(existsSync);
+const nvmrc = withFlag('nvmrc').map((r) => join(ws, r, '.nvmrc')).find(existsSync);
 const want = nvmrc ? readFileSync(nvmrc, 'utf8').trim() : '24';
 add('tools', 'node', nodeV === want ? 'ok' : nodeV.split('.')[0] === want.split('.')[0] ? 'warn' : 'fail', `${nodeV} (cần ${want})`, `nvm install ${want} && nvm use ${want}`);
 const npmV = run('npm', ['-v']).out;
@@ -68,7 +71,7 @@ for (const r of REPOS) {
   const dir = join(ws, r);
   if (!existsSync(join(dir, '.git'))) {
     const there = existsSync(dir);
-    add('repos', r, r === 'hallo-claude' ? 'warn' : 'fail', there ? 'có thư mục nhưng chưa là git repo' : 'chưa clone', there ? `cd ${dir} && git init && git remote add origin git@github.com:${ORG}/${r}.git` : `git clone git@github.com:${ORG}/${r}.git ${dir}`);
+    add('repos', r, company.repos[r].optional ? 'warn' : 'fail', there ? 'có thư mục nhưng chưa là git repo' : 'chưa clone', there ? `cd ${dir} && git init && git remote add origin git@github.com:${ORG}/${r}.git` : `git clone git@github.com:${ORG}/${r}.git ${dir}`);
     continue;
   }
   const g = (...a) => { const x = run('git', ['-C', dir, ...a]); return x.ok ? x.out : ''; };
@@ -77,11 +80,12 @@ for (const r of REPOS) {
   const behind = g('rev-list', '--count', 'HEAD..@{u}');
   const detail = [`nhánh ${branch}`, dirty ? `${dirty} file đang sửa` : 'sạch', behind ? `behind ${behind}` : 'chưa có upstream'];
   let status = 'ok';
-  if (['hallo-api', 'hallo-web'].includes(r)) {
+  const needsEnv = Boolean(company.repos[r].env);
+  if (company.repos[r].deps) {
     if (!existsSync(join(dir, 'node_modules'))) (status = 'warn'), detail.push('chưa npm ci');
-    if (r === 'hallo-api' && !existsSync(join(dir, '.env'))) (status = 'warn'), detail.push('chưa có .env');
+    if (needsEnv && !existsSync(join(dir, '.env'))) (status = 'warn'), detail.push('chưa có .env');
   }
-  add('repos', r, status, detail.join(' · '), status === 'ok' ? '' : `cd ${dir} && npm ci${r === 'hallo-api' ? ' && cp -n .env.example .env' : ''}`);
+  add('repos', r, status, detail.join(' · '), status === 'ok' ? '' : `cd ${dir} && npm ci${needsEnv ? ' && cp -n .env.example .env' : ''}`);
 }
 
 // Bảo mật: baseline /sec:harden + hook pre-commit đã bật trên máy này
@@ -100,7 +104,7 @@ for (const r of REPOS) {
 }
 
 // Claude plugins
-const settingsFiles = [join(homedir(), '.claude', 'settings.json'), ...['hallo-api', 'hallo-web', 'hallo-system-knowledge'].map((r) => join(ws, r, '.claude', 'settings.json'))];
+const settingsFiles = [join(homedir(), '.claude', 'settings.json'), ...requiredRepos.map((r) => join(ws, r, '.claude', 'settings.json'))];
 const enabled = new Set();
 let marketKnown = false;
 for (const f of settingsFiles) {
@@ -111,9 +115,9 @@ for (const f of settingsFiles) {
 }
 const installed = readJson(join(homedir(), '.claude', 'plugins', 'known_marketplaces.json'));
 if (installed && installed[MARKET]) marketKnown = true;
-add('claude', `marketplace ${MARKET}`, marketKnown ? 'ok' : 'fail', marketKnown ? 'đã khai báo' : 'chưa khai báo', `claude plugin marketplace add ${ORG}/hallo-claude`);
+add('claude', `marketplace ${MARKET}`, marketKnown ? 'ok' : 'fail', marketKnown ? 'đã khai báo' : 'chưa khai báo', `claude plugin marketplace add ${ORG}/${company.pluginsRepo}`);
 add('claude', 'plugins bật', enabled.size ? 'ok' : 'warn', enabled.size ? [...enabled].join(', ') : 'chưa thấy trong settings (có thể đã cài ở scope user)', `/setup:repo hoặc claude plugin install git@${MARKET}`);
-add('claude', 'HALLO_KB', existsSync(join(ws, 'hallo-system-knowledge', 'AGENTS.md')) || process.env.HALLO_KB ? 'ok' : 'warn', process.env.HALLO_KB || join(ws, 'hallo-system-knowledge'), 'clone hallo-system-knowledge cạnh hallo-api hoặc export HALLO_KB=<path>');
+add('claude', 'HALLO_KB', existsSync(join(ws, KB, company.kbMarker)) || process.env.HALLO_KB ? 'ok' : 'warn', process.env.HALLO_KB || join(ws, KB), `clone ${KB} cạnh các repo hoặc export HALLO_KB=<path>`);
 
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify({ workspace: ws, checks }, null, 2));

@@ -1,11 +1,25 @@
 {
   "name": "review",
   "displayName": "Hallo Review",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Code review theo quy tắc R-xxx của hallo-system-knowledge (chuẩn tầng 1 bot pr-review), review PR, xử lý góp ý",
-  "author": { "name": "HalloJapan Group Platform Team" },
+  "author": {
+    "name": "HalloJapan Group Platform Team"
+  },
   "repository": "https://github.com/HallojapanAI/hallo-claude",
   "license": "UNLICENSED",
-  "keywords": ["review", "code-review", "pr"],
-  "metadata": { "shared": ["hallo-ctx.mjs", "kb-rules.mjs", "security/merge-gate.mjs"] }
+  "keywords": [
+    "review",
+    "code-review",
+    "pr"
+  ],
+  "metadata": {
+    "shared": [
+      "company.mjs",
+      "company.json",
+      "hallo-ctx.mjs",
+      "kb-rules.mjs",
+      "security/merge-gate.mjs"
+    ]
+  }
 }

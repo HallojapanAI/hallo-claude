@@ -24,9 +24,11 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { INTEGRATION, RELEASE, company, repoByAlias, repoNames } from './company.mjs';
 
 const LIMIT = 60_000;
-const ALIASES = { api: 'hallo-api', web: 'hallo-web', kb: 'hallo-system-knowledge', claude: 'hallo-claude' };
+// Mặc định `repos` không có tham số: các repo có `deps` (code) — vd api,web.
+const DEFAULT_REPOS = repoNames.filter((r) => company.repos[r].deps).map((r) => company.repos[r].alias ?? r).join(',');
 
 const sh = (cmd, args, cwd = process.cwd()) => {
   try {
@@ -80,7 +82,7 @@ function workspace() {
 
 function repos(list) {
   const ws = workspace();
-  const names = (list || 'api,web').split(',').map((n) => ALIASES[n.trim()] ?? n.trim()).filter(Boolean);
+  const names = (list || DEFAULT_REPOS).split(',').map((n) => repoByAlias(n.trim())).filter(Boolean);
   return names.map((name) => {
     const path = join(ws, name);
     const ok = existsSync(join(path, '.git'));
@@ -90,16 +92,19 @@ function repos(list) {
     const remote = remoteName ? sh('git', ['remote', 'get-url', remoteName], path) : '';
     const slug = (remote.match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/) ?? [])[1] ?? '';
     const has = (b) => remoteName && sh('git', ['rev-parse', '--verify', '--quiet', `refs/remotes/${remoteName}/${b}`], path);
-    const base = has('dev') ? 'dev' : 'main';
+    const base = has(INTEGRATION) ? INTEGRATION : RELEASE;
     return { name, path, exists: ok, slug, remote: remoteName, base };
   });
 }
+
+// Tên repo công ty (vd hallo-api|hallo-web|…) để nhận tham chiếu trong plan.
+const REPO_ALT = repoNames.map((r) => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
 // Ghi chú tham chiếu trong plan bằng `<repo>/<path>[:dòng]` → link GitHub cố định theo commit,
 // để người review mở đúng phiên bản code mà plan dựa vào. In ra stderr số link đã đổi / chưa có trên remote.
 export function linkify(text, resolver) {
   const stats = { linked: 0, local: [] };
-  const out = text.replace(/(?<!\[)`(hallo-[a-z-]+)\/([^`\s:]+?)(\/)?(?::(\d+)(?:-(\d+))?)?`(?!\])/g, (m, repo, path, slash, l1, l2) => {
+  const out = text.replace(new RegExp(`(?<!\\[)\`(${REPO_ALT})\\/([^\`\\s:]+?)(\\/)?(?::(\\d+)(?:-(\\d+))?)?\`(?!\\])`, 'g'), (m, repo, path, slash, l1, l2) => {
     const r = resolver(repo, path);
     if (!r) {
       stats.local.push(`${repo}/${path}`);

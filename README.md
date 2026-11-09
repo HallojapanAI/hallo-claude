@@ -11,7 +11,8 @@ claude plugin install git@hallo review@hallo sec@hallo kb@hallo setup@hallo task
 ```
 
 Hoặc để repo tự bật cho mọi người: chạy `/setup:repo` một lần trong hallo-api / hallo-web / hallo-system-knowledge
-và commit `.claude/settings.json` (người khác chỉ cần trust thư mục khi mở Claude).
+và commit `.claude/settings.json` + `.claude/rules/hallo.md` + `CLAUDE.md` (người khác chỉ cần trust thư mục khi mở Claude;
+cloud session trên claude.ai/code và app điện thoại không nạp plugin nhưng vẫn đọc 3 file này).
 
 Kiểm máy: `/setup:doctor` · Máy mới: `/setup:init`.
 
@@ -93,7 +94,7 @@ plugins/<tên>/                    một plugin = một nhóm lệnh /<tên>:<sk
   skills/<skill>/SKILL.md           mỗi skill = một lệnh; references/ cho tài liệu dài
   agents/*.md                       subagent (vd reviewer, auditor chỉ-đọc)
   hooks/hooks.json, scripts/        hook + script (scripts/<shared> do npm run sync sinh)
-shared/                           BẢN GỐC script dùng chung (hallo-ctx, kb-rules)
+shared/                           BẢN GỐC script dùng chung (company.json = cấu hình công ty, hallo-ctx, kb-rules)
 templates/plugin/                 khung cho plugin mới (npm run new)
 scripts/                          sync-shared, validate, new-plugin
 tests/                            test hook guard

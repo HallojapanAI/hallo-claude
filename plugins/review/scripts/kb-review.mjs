@@ -13,6 +13,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { INTEGRATION, company, repoNames } from './company.mjs';
 
 const sh = (cmd, args, cwd) => {
   try {
@@ -21,7 +22,9 @@ const sh = (cmd, args, cwd) => {
     return '';
   }
 };
-export const REPOS = { api: 'hallo-api', web: 'hallo-web', 'hallo-api': 'hallo-api', 'hallo-web': 'hallo-web' };
+// Repo code (api, web) nhận review tầng 1: alias → tên và tên → tên.
+const CODE_REPOS = repoNames.filter((r) => ['api', 'web'].includes(company.repos[r].kind));
+export const REPOS = Object.fromEntries(CODE_REPOS.flatMap((r) => [[company.repos[r].alias, r], [r, r]]));
 
 // Repo knowledge: HALLO_KB, hoặc cạnh repo gốc của thư mục hiện tại (kể cả khi đang ở worktree).
 export function findKb(cwd = process.cwd()) {
@@ -30,7 +33,7 @@ export function findKb(cwd = process.cwd()) {
   const root = common ? dirname(common) : cwd;
   for (const dir of [root, dirname(root), cwd, dirname(cwd)]) {
     if (existsSync(join(dir, 'tools', 'ci', 'review-local.mjs'))) return dir;
-    const kb = join(dir, 'hallo-system-knowledge');
+    const kb = join(dir, company.kb);
     if (existsSync(join(kb, 'tools', 'ci', 'review-local.mjs'))) return kb;
   }
   return '';
@@ -47,7 +50,7 @@ export function preflight(tier = 'pr') {
     codeRoot,
     gh: login || null,
     claude,
-    clones: Object.fromEntries(['hallo-api', 'hallo-web'].map((r) => [r, existsSync(join(codeRoot, r, '.git'))])),
+    clones: Object.fromEntries(CODE_REPOS.map((r) => [r, existsSync(join(codeRoot, r, '.git'))])),
     findingsFlag: script.includes("'--findings'"),
   };
   if (tier === 'system' && kb) {
@@ -57,13 +60,13 @@ export function preflight(tier = 'pr') {
     out.kbBehind = Number(sh('git', ['rev-list', '--count', 'HEAD..@{u}'], kb) || 0);
   }
   const problems = [];
-  if (!kb) problems.push('không thấy hallo-system-knowledge (clone cạnh repo, hoặc đặt HALLO_KB)');
+  if (!kb) problems.push(`không thấy ${company.kb} (clone cạnh repo, hoặc đặt HALLO_KB)`);
   if (!out.gh) problems.push('gh chưa đăng nhập: gh auth login');
   if (!claude) problems.push('không có lệnh claude trong PATH');
   if (kb && !out.findingsFlag) problems.push('repo knowledge cũ (thiếu --findings): git -C <kb> pull');
   for (const [r, ok] of Object.entries(out.clones)) if (kb && !ok) problems.push(`không thấy clone ${r} ở ${codeRoot}`);
   if (tier === 'system' && kb) {
-    if (out.kbBranch !== 'dev') problems.push(`repo knowledge đang ở ${out.kbBranch}, cần dev`);
+    if (out.kbBranch !== INTEGRATION) problems.push(`repo knowledge đang ở ${out.kbBranch}, cần ${INTEGRATION}`);
     if (!out.kbClean) problems.push('repo knowledge có thay đổi chưa commit');
     if (out.kbBehind) problems.push(`repo knowledge behind ${out.kbBehind} commit: git -C <kb> pull --ff-only`);
   }

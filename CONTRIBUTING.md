@@ -34,13 +34,24 @@ Rồi mở PR (`/git:ship`). Plugin cả team cần → thêm `"<tên>@hallo": t
   Các repo nhận bản mới khi chạy `/sec:harden` (hoặc `/setup:doctor` báo lệch).
 - Repo này **public**: không ghi host, IP, đường dẫn server, tên người, phát hiện bảo mật cụ thể. Hook pre-commit và CI `secret-scan` chặn phần lớn trường hợp.
 
+## Cấu hình công ty: `shared/company.json`
+
+Mọi thứ gắn với HalloJapan (org GitHub, tên marketplace, danh sách repo + `kind`/`alias`/lệnh check, nhánh `dev`/`main`,
+nhánh bảo vệ, mẫu ID `HJ-`/`RV-`, tên repo tri thức) nằm **một chỗ** ở `shared/company.json`; script đọc qua
+`shared/company.mjs` (`company`, `repoByAlias`, `repoKind`, `refIdRegex`, `PROTECTED`, `INTEGRATION`…). Không hardcode
+lại trong plugin. Thêm repo mới cho công ty → thêm một dòng vào `repos` rồi `npm run sync`.
+
+Công ty khác muốn dùng bộ plugin này: clone repo, sửa `company.json`, đổi tên `hallo-*` (`hallo-ctx`, `HALLO_*`, marketplace),
+bỏ plugin không áp dụng. Skill text (`SKILL.md`, `references/`) vẫn nhắc tên HalloJapan — rà bằng `grep -ri hallo plugins/*/skills`.
+
 ## Script dùng chung
 
 Plugin được cài vào cache riêng, không đọc được file ngoài thư mục của nó, nên script chung phải **chép vào**
 từng plugin:
 
 1. Sửa bản gốc ở `shared/`.
-2. Khai báo trong `plugin.json` → `"metadata": { "shared": ["hallo-ctx.mjs"] }`.
+2. Khai báo trong `plugin.json` → `"metadata": { "shared": ["company.json", "company.mjs", "hallo-ctx.mjs"] }`
+   (`hallo-ctx.mjs`, `kb-rules.mjs`, `guard.mjs`… import `./company.mjs` nên luôn cần cả hai file company).
 3. `npm run sync` (CI chạy `validate` sẽ fail nếu bản chép lệch bản gốc).
 
 ## Version & phát hành

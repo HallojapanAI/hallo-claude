@@ -1,11 +1,23 @@
 {
   "name": "kb",
   "displayName": "Hallo Knowledge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Tri thức hệ thống từ hallo-system-knowledge: tra HJ/RV/R, tự nạp ngữ cảnh nghiệp vụ, cập nhật memory sau PR",
-  "author": { "name": "HalloJapan Group Platform Team" },
+  "author": {
+    "name": "HalloJapan Group Platform Team"
+  },
   "repository": "https://github.com/HallojapanAI/hallo-claude",
   "license": "UNLICENSED",
-  "keywords": ["knowledge", "docs", "memory"],
-  "metadata": { "shared": ["hallo-ctx.mjs"] }
+  "keywords": [
+    "knowledge",
+    "docs",
+    "memory"
+  ],
+  "metadata": {
+    "shared": [
+      "company.mjs",
+      "company.json",
+      "hallo-ctx.mjs"
+    ]
+  }
 }
