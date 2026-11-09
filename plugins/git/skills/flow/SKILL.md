@@ -21,7 +21,7 @@ Ngữ cảnh repo hiện tại:
 1. Base của mọi PR là **`dev`**. Không push thẳng `dev`/`main`/`master` (push `dev` = deploy + review hệ thống).
 2. Nhánh: `<type>/<ref>-<slug>` từ `origin/dev` — vd `feat/HJ-022-qr-revoke`, `fix/RV-002-google-email-verified`.
 3. Commit: `type(scope): summary` tiếng Anh, ≤ 72 ký tự, một ý mỗi commit. Không attribution AI.
-4. PR: title = dòng commit chuẩn (squash merge), body tiếng Việt theo `references/pr-body.md`.
+4. PR vào `dev` merge bằng **rebase** (mỗi commit lên `dev` nguyên vẹn → commit nào cũng phải chuẩn), release `dev → main` bằng **merge commit**. Title = dòng commit chính, body tiếng Việt theo `references/pr-body.md`.
 5. Liên kết: `Refs HJ-xxx`, `Fixes RV-xxx`, `Fixes #n` khi có (lấy gợi ý từ tên nhánh).
 6. Chạy check của repo (dòng `check:` ở trên) trước khi push; đỏ thì sửa, không bỏ qua.
 7. Làm đủ "việc kèm theo" (dòng `việc kèm theo:` ở trên): OpenAPI (R-013), migration, i18n en/vi/ja.
@@ -43,7 +43,7 @@ Mẫu body PR: [references/pr-body.md](references/pr-body.md).
 | `/git:pr` | Tạo/cập nhật PR cho nhánh hiện tại |
 | `/git:sync` | Rebase lên `origin/dev` mới nhất |
 | `/git:status` | Trạng thái + PR + check + bước tiếp |
-| `/git:release` | PR release `dev → main/master` |
+| `/git:release` | PR release `dev → main` |
 | `/git:clean` | Dọn nhánh local đã merge |
 
 Khi user nói chung chung ("commit giúp", "đẩy lên", "mở PR"), làm theo đúng quy trình của lệnh tương ứng ở trên.
