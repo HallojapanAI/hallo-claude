@@ -1,6 +1,6 @@
 ---
 name: scan
-description: Quét bảo mật thay đổi hiện tại (mặc định) hoặc toàn repo — secret, phân quyền theo shop, auth/OAuth, rate limit, upload, injection, XSS/CSP, CSRF, phụ thuộc — theo quy tắc SEC của HalloJapan.
+description: Quét bảo mật thay đổi hiện tại (mặc định) hoặc toàn repo — secret, thông tin cá nhân (個人情報), phân quyền theo shop, auth/OAuth, rate limit, upload, injection, XSS/CSP, CSRF, phụ thuộc — theo quy tắc SEC của HalloJapan.
 argument-hint: "[--all | đường dẫn] [--deps]"
 context: fork
 agent: auditor
@@ -30,6 +30,11 @@ Phạm vi: `$ARGUMENTS` — mặc định thay đổi so với `origin/dev` (c�
 
 **Chung**
 - Secret/PII trong code, test, docs, `.env.example` (R-008): `gitleaks detect --no-banner --redact` nếu có; không thì grep `(?i)(secret|token|password|api[_-]?key|private key|BEGIN [A-Z ]*KEY)`.
+- Thông tin cá nhân — 個人情報 (R-017): tên người, điện thoại, fax, email, địa chỉ, mã bưu chính, tài khoản ngân hàng, giấy tờ định danh của khách hàng, nhà cung cấp, người phụ trách, nhân viên.
+  - Lưu: cột mới chứa các trường này phải qua `sealPersonalData` (mã hóa tầng ứng dụng, gắn `shopId`); cột chữ thường → báo. Cần tìm kiếm → chỉ mục HMAC, không lưu bản rõ.
+  - Trả: lọc theo vai trò trong mapper DTO chung; danh sách chỉ trả bản che, xem đầy đủ là endpoint riêng.
+  - Rò rỉ: giá trị không được vào log, audit detail, lịch sử thay đổi (chỉ ghi tên trường), thông báo lỗi, metadata AI, URL/query string, `localStorage`, fixture, issue, PR, tài liệu.
+  - AI: dữ liệu AI đọc ra có thông tin cá nhân phải mã hóa ngay khi lưu; không gửi thêm thông tin cá nhân cho AI ngoài tài liệu người dùng đưa lên.
 - Phụ thuộc (`--deps`): `npm audit --omit=dev --json` → chỉ báo high/critical có đường tới code chạy thật.
 
 **hallo-api (NestJS + Prisma)**
