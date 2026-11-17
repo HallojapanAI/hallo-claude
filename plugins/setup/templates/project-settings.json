@@ -11,7 +11,8 @@
     "sec@hallo": true,
     "kb@hallo": true,
     "setup@hallo": true,
-    "task@hallo": true
+    "task@hallo": true,
+    "ui@hallo": true
   },
   "hooks": {
     "SessionStart": [

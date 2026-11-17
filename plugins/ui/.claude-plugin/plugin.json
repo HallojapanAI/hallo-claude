@@ -1,0 +1,20 @@
+{
+  "name": "ui",
+  "version": "0.1.0",
+  "description": "UI/UX đồng bộ hallo-web & hallo-admin: nguyên tắc thiết kế adaptive PC/Mobile + design token chung",
+  "author": {
+    "name": "HalloJapan Group Platform Team"
+  },
+  "repository": "https://github.com/HallojapanAI/hallo-claude",
+  "license": "UNLICENSED",
+  "keywords": [
+    "ui",
+    "ux",
+    "design-system",
+    "frontend"
+  ],
+  "metadata": {
+    "shared": ["company.mjs", "company.json"]
+  },
+  "displayName": "Hallo UI/UX"
+}
