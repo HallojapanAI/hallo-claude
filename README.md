@@ -7,7 +7,7 @@ Git/GitHub, review, bảo mật và tài liệu **theo cùng một chuẩn**, v�
 
 ```sh
 claude plugin marketplace add HallojapanAI/hallo-claude
-claude plugin install git@hallo review@hallo sec@hallo kb@hallo setup@hallo task@hallo
+claude plugin install git@hallo review@hallo sec@hallo kb@hallo setup@hallo task@hallo ui@hallo
 ```
 
 Hoặc để repo tự bật cho mọi người: chạy `/setup:repo` một lần trong hallo-api / hallo-web / hallo-system-knowledge
@@ -22,7 +22,7 @@ Khi có bản mới (version trong `plugin.json` tăng):
 
 ```sh
 claude plugin marketplace update hallo      # tải danh sách plugin mới nhất
-claude plugin update task@hallo             # cập nhật từng plugin (git, review, sec, kb, setup, task)
+claude plugin update task@hallo             # cập nhật từng plugin (git, review, sec, kb, setup, task, ui)
 ```
 
 Đang mở Claude thì gõ `/reload-plugins` (hoặc mở lại phiên). Plugin mới thêm vào marketplace (vd `task`) cần `claude plugin install <tên>@hallo` một lần,
@@ -61,6 +61,7 @@ Một task điển hình: `/plan` → `/task:open` → (review, gắn `plan-appr
 | [kb](plugins/kb) | `find` `sync` | Skill `context` tự đọc hallo-system-knowledge khi cần nghiệp vụ/kiến trúc |
 | [setup](plugins/setup) | `doctor` `init` `repo` | — |
 | [task](plugins/task) | `open` `go` `plan-update` `status` `done` | — (quy trình: [workflow.md](plugins/task/skills/open/references/workflow.md)) |
+| [ui](plugins/ui) | — | Skill `design` tự nạp nguyên tắc UI/UX + token chung khi làm giao diện hallo-web / hallo-admin |
 
 Gõ `/` rồi vài ký tự (vd `/ship`) — autocomplete tìm đúng lệnh.
 
